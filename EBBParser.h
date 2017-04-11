@@ -35,16 +35,16 @@ private:
     void nodeCountIncrement();
     void nodeCountDecrement();
     void stepperMove(const char* arg1, const char* arg2, const char* arg3);
-    void setPenUp();
-    void setPenDown();
-    void setPen(const char* arg1, const char* arg2);
+    void setPenState(const char* arg1, const char* arg2, const char* arg3);
     void togglePen(const char* arg);
     void enableMotors(const char* arg1, const char* arg2);
-    void stepperModeConfigure(const char* arg1, const char* arg2);
+    void stepperAndServoModeConfigure(const char* arg1, const char* arg2);
     void pinOutput(const char* arg1, const char* arg2, const char* arg3);
     void setEngraver(const char* arg);
     void sendVersion();
 
+    void setPenUp();
+    void setPenDown();
     void prepareMove(int duration, int penStepsEBB, int rotStepsEBB);
     void moveToDestination();
     void moveOneStep();
