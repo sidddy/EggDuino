@@ -261,17 +261,17 @@ void EBBParser::stepperMove(const char* arg1, const char* arg2, const char* arg3
     }
 
     int duration = atoi(arg1);
-    int penStepsEBB = atoi(arg2);
-    int rotStepsEBB = atoi(arg3);
+    int axis1 = atoi(arg2);
+    int axis2 = atoi(arg3);
 
     sendAck();
 
-    if ((penStepsEBB == 0) && (rotStepsEBB == 0)) {
+    if ((axis1 == 0) && (axis2 == 0)) {
         delay(duration);
         return;
     }
 
-    prepareMove(duration, penStepsEBB, rotStepsEBB);
+    prepareMove(duration, axis1, axis2);
 }
 
 void EBBParser::setPenUp()
