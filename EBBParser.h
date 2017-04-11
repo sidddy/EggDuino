@@ -7,13 +7,14 @@
 // Supported Servos: I do not know, I use Arduino Servo Lib with TG9e- standard servo.
 // Note: Maximum-Speed in Inkscape is 1000 Steps/s. You could enter more, but then Pythonscript sends nonsense.
 // EBB-Coordinates are coming in for 16th-Microstepmode. The Coordinate-Transforms are done in weired integer-math. Be careful, when you diecide to modify settings.
+#include <Stream.h>
 
 #include <AccelStepper.h>
 #include <VarSpeedServo.h>
 
 class EBBParser {
 public:
-    EBBParser();
+    EBBParser(Stream& stream);
 
     void init();
     void processEvents();
@@ -49,9 +50,11 @@ private:
     void moveToDestination();
     void moveOneStep();
 
-    void readSerial();
+    void readStream();
     void sendAck();
     void sendError();
+
+    Stream& mStream;
 
     AccelStepper rotMotor;
     AccelStepper penMotor;

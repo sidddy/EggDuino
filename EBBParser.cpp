@@ -11,9 +11,10 @@
 #define penUpRateEEAddress ((uint16_t*)4)
 #define penDownRateEEAddress ((uint16_t*)6)
 
-EBBParser::EBBParser()
+EBBParser::EBBParser(Stream& stream)
     : motorsEnabled(false)
     , prgButtonState(false)
+    , mStream(stream)
     , rotMotor(1, X_STEP_PIN, X_DIR_PIN)
     , penMotor(1, Y_STEP_PIN, Y_DIR_PIN)
     , penMin(0)
@@ -57,17 +58,17 @@ void EBBParser::init()
 void EBBParser::processEvents()
 {
     moveOneStep();
-    readSerial();
+    readStream();
 }
 
 void EBBParser::sendAck()
 {
-    Serial.print("OK\r\n");
+    mStream.print("OK\r\n");
 }
 
 void EBBParser::sendError()
 {
-    Serial.print("!8 Err: Unknown command\r\n");
+    mStream.print("!8 Err: Unknown command\r\n");
 }
 
 void EBBParser::motorsOff()
@@ -158,12 +159,12 @@ void EBBParser::doTogglePen()
     }
 }
 
-void EBBParser::readSerial()
+void EBBParser::readStream()
 {
-    if (!Serial.available())
+    if (!mStream.available())
         return;
 
-    const char inChar = Serial.read();
+    const char inChar = mStream.read();
     if (inChar != '\r') {
         if (readBuffer.length() < 64 && isprint(inChar))
             readBuffer += inChar;
@@ -233,7 +234,7 @@ Version History: Added in v1.9
 void EBBParser::queryPen()
 {
     char state = (penState == penUpPos) ? '0' : '1';
-    Serial.print(String(state) + "\r\n");
+    mStream.print(String(state) + "\r\n");
     sendAck();
 }
 
@@ -253,7 +254,7 @@ Version History: Added in v1.9.2
 */
 void EBBParser::queryButton()
 {
-    Serial.print(String(prgButtonState) + "\r\n");
+    mStream.print(String(prgButtonState) + "\r\n");
     sendAck();
     prgButtonState = false;
 }
@@ -274,7 +275,7 @@ Version History: Added in v1.9.2
 */
 void EBBParser::queryLayer()
 {
-    Serial.print(String(layer) + "\r\n");
+    mStream.print(String(layer) + "\r\n");
     sendAck();
 }
 
@@ -324,7 +325,7 @@ Version History: Added in v1.9.2
 */
 void EBBParser::queryNodeCount()
 {
-    Serial.print(String(nodeCount) + "\r\n");
+    mStream.print(String(nodeCount) + "\r\n");
     sendAck();
 }
 
@@ -748,5 +749,5 @@ This command prints out the version string of the firmware currently running on 
 */
 void EBBParser::sendVersion()
 {
-    Serial.print("EBBv13_and_above Protocol emulated by Eggduino-Firmware V1.x\r\n");
+    mStream.print("EBBv13_and_above Protocol emulated by Eggduino-Firmware V1.x\r\n");
 }

@@ -2,7 +2,7 @@
 #include "EBBParser.h"
 #include "Button.h"
 
-EBBParser ebb;
+EBBParser ebb(Serial);
 
 // Buttons
 #define PRG_BUTTON_PIN A2 // PRG button ("Abort")
