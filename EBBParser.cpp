@@ -244,7 +244,7 @@ Version History: Added in v1.9
 */
 void EBBParser::queryPen()
 {
-    char state = (penState == penUpPos) ? '0' : '1';
+    const char state = (penState == penUpPos) ? '0' : '1';
     mStream.print(String(state) + "\r\n");
     sendAck();
 }
@@ -369,11 +369,11 @@ Version History: Added in v1.9.5
 */
 void EBBParser::setNodeCount(const char* arg)
 {
-    if (arg != NULL) {
-        nodeCount = atoi(arg);
-        sendAck();
-    } else
+    if (arg == NULL)
         sendError();
+
+    nodeCount = atoi(arg);
+    sendAck();
 }
 
 /**
