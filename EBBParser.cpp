@@ -1,16 +1,16 @@
 #include "EBBParser.h"
 #include "config.h"
 
-#include <avr/eeprom.h>
+#include <EEPROM.h>
 
 // devide EBB-Coordinates by this factor to get EGGduino-Steps
 #define rotStepCorrection (16 / X_MICROSTEPPING)
 #define penStepCorrection (16 / Y_MICROSTEPPING)
 
-#define penUpPosEEAddress ((uint16_t*)0)
-#define penDownPosEEAddress ((uint16_t*)2)
-#define penUpRateEEAddress ((uint16_t*)4)
-#define penDownRateEEAddress ((uint16_t*)6)
+#define EEPROM_PEN_UP_POS    0
+#define EEPROM_PEN_DOWN_POS  2
+#define EEPROM_PEN_UP_RATE   4
+#define EEPROM_PEN_DOWN_RATE 6
 
 EBBParser::EBBParser(Stream& stream)
     : motorsEnabled(false)
@@ -35,12 +35,10 @@ EBBParser::EBBParser(Stream& stream)
 
 void EBBParser::init()
 {
-    // enable eeprom wait in avr/eeprom.h functions
-    SPMCSR &= ~SELFPRGEN;
-    penUpPos = eeprom_read_word(penUpPosEEAddress);
-    penDownPos = eeprom_read_word(penDownPosEEAddress);
-    servoRateUp = eeprom_read_word(penUpRateEEAddress);
-    servoRateDown = eeprom_read_word(penDownRateEEAddress);
+    EEPROM.get(EEPROM_PEN_UP_POS, penUpPos);
+    EEPROM.get(EEPROM_PEN_DOWN_POS, penDownPos);
+    EEPROM.get(EEPROM_PEN_UP_RATE, servoRateUp);
+    EEPROM.get(EEPROM_PEN_DOWN_RATE, servoRateDown);
     penState = penUpPos;
 
     pinMode(X_ENABLE_PIN, OUTPUT);
@@ -751,13 +749,13 @@ void EBBParser::stepperAndServoModeConfigure(const char* arg1, const char* arg2)
         case 4:
             // transformation from EBB to PWM-Servo
             penUpPos = (int)((float)(value - 6000) / (float)133.3);
-            eeprom_update_word(penUpPosEEAddress, penUpPos);
+            EEPROM.put(EEPROM_PEN_UP_POS, penUpPos);
             sendAck();
             break;
         case 5:
             // transformation from EBB to PWM-Servo
             penDownPos = (int)((float)(value - 6000) / (float)133.3);
-            eeprom_update_word(penDownPosEEAddress, penDownPos);
+            EEPROM.put(EEPROM_PEN_DOWN_POS, penDownPos);
             sendAck();
             break;
         case 6: // rotMin=value;    ignored
@@ -768,12 +766,12 @@ void EBBParser::stepperAndServoModeConfigure(const char* arg1, const char* arg2)
             break;
         case 11:
             servoRateUp = value / 5;
-            eeprom_update_word(penUpRateEEAddress, servoRateUp);
+            EEPROM.put(EEPROM_PEN_UP_RATE, servoRateUp);
             sendAck();
             break;
         case 12:
             servoRateDown = value / 5;
-            eeprom_update_word(penDownRateEEAddress, servoRateDown);
+            EEPROM.put(EEPROM_PEN_DOWN_RATE, servoRateDown);
             sendAck();
             break;
         default:

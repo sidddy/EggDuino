@@ -62,10 +62,10 @@ private:
 
     int penMin;
     int penMax;
-    int penUpPos;
-    int penDownPos;
-    int servoRateUp;
-    int servoRateDown;
+    short penUpPos; //eeprom
+    short penDownPos; //eeprom
+    short servoRateUp; //eeprom
+    short servoRateDown; //eeprom
     long rotStepError;
     long penStepError;
     int penState;
