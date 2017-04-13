@@ -1,7 +1,7 @@
 // AccelStepper.cpp
 //
 // Copyright (C) 2009-2013 Mike McCauley
-// $Id: AccelStepper.cpp,v 1.19 2014/10/31 06:05:27 mikem Exp mikem $
+// $Id: AccelStepper.cpp,v 1.23 2016/08/09 00:39:10 mikem Exp $
 
 #include "AccelStepper.h"
 
@@ -44,11 +44,8 @@ boolean AccelStepper::runSpeed()
     if (!_stepInterval)
 	return false;
 
-    unsigned long time = micros();
-    unsigned long nextStepTime = _lastStepTime + _stepInterval;
-    // Gymnastics to detect wrapping of either the nextStepTime and/or the current time
-    if (   ((nextStepTime >= _lastStepTime) && ((time >= nextStepTime) || (time < _lastStepTime)))
-	|| ((nextStepTime < _lastStepTime) && ((time >= nextStepTime) && (time < _lastStepTime))))
+    unsigned long time = micros();   
+    if (time - _lastStepTime >= _stepInterval)
     {
 	if (_direction == DIRECTION_CW)
 	{
@@ -62,7 +59,8 @@ boolean AccelStepper::runSpeed()
 	}
 	step(_currentPos);
 
-	_lastStepTime = time;
+	_lastStepTime = time; // Caution: does not account for costs in step()
+
 	return true;
     }
     else
@@ -93,6 +91,7 @@ void AccelStepper::setCurrentPosition(long position)
     _targetPos = _currentPos = position;
     _n = 0;
     _stepInterval = 0;
+    _speed = 0.0;
 }
 
 void AccelStepper::computeNewSpeed()
@@ -258,6 +257,8 @@ AccelStepper::AccelStepper(void (*forward)(), void (*backward)())
 
 void AccelStepper::setMaxSpeed(float speed)
 {
+    if (speed < 0.0)
+       speed = -speed;
     if (_maxSpeed != speed)
     {
 	_maxSpeed = speed;
@@ -271,10 +272,17 @@ void AccelStepper::setMaxSpeed(float speed)
     }
 }
 
+float   AccelStepper::maxSpeed()
+{
+    return _maxSpeed;
+}
+
 void AccelStepper::setAcceleration(float acceleration)
 {
     if (acceleration == 0.0)
 	return;
+    if (acceleration < 0.0)
+      acceleration = -acceleration;
     if (_acceleration != acceleration)
     {
 	// Recompute _n per Equation 17
@@ -360,10 +368,11 @@ void AccelStepper::setOutputPins(uint8_t mask)
 // 0 pin step function (ie for functional usage)
 void AccelStepper::step0(long step)
 {
-  if (_speed > 0)
-    _forward();
-  else
-    _backward();
+    (void)(step); // Unused
+    if (_speed > 0)
+	_forward();
+    else
+	_backward();
 }
 
 // 1 pin step function (ie for stepper drivers)
@@ -371,6 +380,8 @@ void AccelStepper::step0(long step)
 // Subclasses can override
 void AccelStepper::step1(long step)
 {
+    (void)(step); // Unused
+
     // _pin[0] is step, _pin[1] is direction
     setOutputPins(_direction ? 0b10 : 0b00); // Set direction first else get rogue pulses
     setOutputPins(_direction ? 0b11 : 0b01); // step HIGH
@@ -378,7 +389,6 @@ void AccelStepper::step1(long step)
     // Delay the minimum allowed pulse width
     delayMicroseconds(_minPulseWidth);
     setOutputPins(_direction ? 0b10 : 0b00); // step LOW
-
 }
 
 
@@ -535,7 +545,10 @@ void    AccelStepper::disableOutputs()
 
     setOutputPins(0); // Handles inversion automatically
     if (_enablePin != 0xff)
+    {
+        pinMode(_enablePin, OUTPUT);
         digitalWrite(_enablePin, LOW ^ _enableInverted);
+    }
 }
 
 void    AccelStepper::enableOutputs()
@@ -630,4 +643,9 @@ void AccelStepper::stop()
 	else
 	    move(-stepsToStop);
     }
+}
+
+bool AccelStepper::isRunning()
+{
+    return !(_speed == 0.0 && _targetPos == _currentPos);
 }
