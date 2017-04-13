@@ -1,3 +1,6 @@
+
+[![Build Status](https://secure.travis-ci.org/papabricole/EggDuino.png)](http://travis-ci.org/papabricole/EggDuino)
+
 WARNING: This is a work in progress fork. Consider it as non working until I put a release tag.
 
 To compile it, either use platformio or the Arduino IDE.
