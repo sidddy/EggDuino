@@ -9,13 +9,11 @@ class EBBParser {
 public:
     EBBParser(Stream& stream);
 
-    virtual void processEvents();
-
 protected:
+    void parseStream();
+
     virtual void enableMotor(int axis, bool state) = 0;
     virtual void stepperMove(int duration, int numPenSteps, int numRotSteps) = 0;
-    virtual void moveOneStep() = 0;
-    virtual void moveToDestination() = 0;
 
     virtual void setPenState(bool up) = 0;
     virtual bool getPenState() = 0;
@@ -30,7 +28,6 @@ protected:
 
     virtual void setEngraverState(bool state, int power) = 0;
 private:
-    void parseStream();
     void sendAck();
     void sendError();
 

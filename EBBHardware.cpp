@@ -83,7 +83,8 @@ void EBBHardware::processEvents()
         }
     }
 #endif
-    EBBParser::processEvents();
+    parseStream();
+    moveOneStep();
 }
 
 void EBBHardware::enableMotor(int axis, bool state)
@@ -97,6 +98,8 @@ void EBBHardware::enableMotor(int axis, bool state)
 
 void EBBHardware::stepperMove(int duration, int numPenSteps, int numRotSteps)
 {
+    moveToDestination();
+
     // if coordinatessystems are identical
     if ((1 == rotStepCorrection) && (1 == penStepCorrection)) {
         // set Coordinates and Speed
@@ -138,17 +141,18 @@ void EBBHardware::stepperMove(int duration, int numPenSteps, int numRotSteps)
     }
 }
 
-void EBBHardware::moveToDestination()
+bool EBBHardware::moveOneStep()
 {
-    while (penMotor.distanceToGo() || rotMotor.distanceToGo()) {
+    if (penMotor.distanceToGo() || rotMotor.distanceToGo()) {
         penMotor.runSpeedToPosition(); // Moving.... moving... moving....
         rotMotor.runSpeedToPosition();
     }
+    return true;
 }
 
-void EBBHardware::moveOneStep()
+void EBBHardware::moveToDestination()
 {
-    if (penMotor.distanceToGo() || rotMotor.distanceToGo()) {
+    while (penMotor.distanceToGo() || rotMotor.distanceToGo()) {
         penMotor.runSpeedToPosition(); // Moving.... moving... moving....
         rotMotor.runSpeedToPosition();
     }
@@ -170,6 +174,8 @@ void EBBHardware::setEngraverState(bool state, int power)
 
 void EBBHardware::setPenState(bool up)
 {
+    moveToDestination();
+
     if (up) {
         penServo.write(penUpPos, servoRateUp, true);
     } else {

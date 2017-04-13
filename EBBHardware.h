@@ -37,14 +37,14 @@ protected:
 
     virtual bool getPrgButtonState();
 
-    virtual void moveToDestination();
-    virtual void moveOneStep();
-
     virtual void setPinOutput(char port, int pin, int value);
 
     virtual void setEngraverState(bool state, int power);
 
 private:
+    bool moveOneStep();
+    void moveToDestination();
+
     AccelStepper rotMotor;
     AccelStepper penMotor;
     VarSpeedServo penServo;

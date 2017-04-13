@@ -9,12 +9,6 @@ EBBParser::EBBParser(Stream& stream)
     readBuffer.reserve(64);
 }
 
-void EBBParser::processEvents()
-{
-    moveOneStep();
-    parseStream();
-}
-
 void EBBParser::sendAck()
 {
     mStream.print("OK\r\n");
@@ -542,8 +536,6 @@ Example: SM,1000,250,-766\r Move axis1 by 250 steps and axis2 by -766 steps, in
 */
 void EBBParser::parseSM(const char* arg1, const char* arg2, const char* arg3)
 {
-    moveToDestination();
-
     if (arg1 == NULL || arg2 == NULL) {
         sendError();
         return;
@@ -647,8 +639,6 @@ void EBBParser::parseSP(const char* arg1, const char* arg2, const char* arg3)
         return;
     }
 
-    moveToDestination();
-
     int cmd = atoi(arg1);
     switch (cmd) {
     case 0: // Lower
@@ -699,8 +689,6 @@ internally.
 */
 void EBBParser::parseTP(const char* arg)
 {
-    moveToDestination();
-
     int value = (arg != NULL) ? atoi(arg) : 500;
 
     setPenState(!getPenState());
