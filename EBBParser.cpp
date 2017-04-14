@@ -58,7 +58,7 @@ void EBBParser::init()
 void EBBParser::processEvents()
 {
     moveOneStep();
-    readStream();
+    parseStream();
 }
 
 void EBBParser::sendAck()
@@ -169,7 +169,7 @@ void EBBParser::doTogglePen()
     }
 }
 
-void EBBParser::readStream()
+void EBBParser::parseStream()
 {
     if (!mStream.available())
         return;
@@ -187,415 +187,45 @@ void EBBParser::readStream()
     const char* arg2 = strsep(&str, ",");
     const char* arg3 = strsep(&str, ",");
 
-    if (strcmp(cmd, "v") == 0) {
-        sendVersion();
-    } else if (strcmp(cmd, "EM") == 0) {
-        enableMotors(arg1, arg2);
-    } else if (strcmp(cmd, "SC") == 0) {
-        stepperAndServoModeConfigure(arg1, arg2);
-    } else if (strcmp(cmd, "SP") == 0) {
-        setPenState(arg1, arg2, arg3);
-    } else if (strcmp(cmd, "SM") == 0) {
-        stepperMove(arg1, arg2, arg3);
-    } else if (strcmp(cmd, "SE") == 0) {
-        setEngraver(arg1);
-    } else if (strcmp(cmd, "TP") == 0) {
-        togglePen(arg1);
+
+    if (strcmp(cmd, "EM") == 0) {
+        parseEM(arg1, arg2);
+    } else if (strcmp(cmd, "ND") == 0) {
+        parseND();
+    } else if (strcmp(cmd, "NI") == 0) {
+        parseNI();
     } else if (strcmp(cmd, "PD") == 0) {
         sendAck();
     } else if (strcmp(cmd, "PO") == 0) {
-        pinOutput(arg1, arg2, arg3);
-    } else if (strcmp(cmd, "NI") == 0) {
-        nodeCountIncrement();
-    } else if (strcmp(cmd, "ND") == 0) {
-        nodeCountDecrement();
-    } else if (strcmp(cmd, "SN") == 0) {
-        setNodeCount(arg1);
-    } else if (strcmp(cmd, "QN") == 0) {
-        queryNodeCount();
-    } else if (strcmp(cmd, "SL") == 0) {
-        setLayer(arg1);
-    } else if (strcmp(cmd, "QL") == 0) {
-        queryLayer();
-    } else if (strcmp(cmd, "QP") == 0) {
-        queryPen();
+        parsePO(arg1, arg2, arg3);
     } else if (strcmp(cmd, "QB") == 0) {
-        queryButton();
+        parseQB();
+    } else if (strcmp(cmd, "QL") == 0) {
+        parseQL();
+    } else if (strcmp(cmd, "QN") == 0) {
+        parseQN();
+    } else if (strcmp(cmd, "QP") == 0) {
+        parseQP();
+    } else if (strcmp(cmd, "SC") == 0) {
+        parseSC(arg1, arg2);
+    } else if (strcmp(cmd, "SE") == 0) {
+        parseSE(arg1);
+    } else if (strcmp(cmd, "SL") == 0) {
+        parseSL(arg1);
+    } else if (strcmp(cmd, "SM") == 0) {
+        parseSM(arg1, arg2, arg3);
+    } else if (strcmp(cmd, "SN") == 0) {
+        parseSN(arg1);
+    } else if (strcmp(cmd, "SP") == 0) {
+        parseSP(arg1, arg2, arg3);
+    } else if (strcmp(cmd, "TP") == 0) {
+        parseTP(arg1);
+    } else if (strcmp(cmd, "v") == 0) {
+        parseV();
     } else
         sendError();
 
     readBuffer = "";
-}
-
-/**
-"QP" — Query Pen
-
-Command: QP<CR>
-Response: PenStatus<NL><CR>OK<NL><CR>
-Firmware versions: v1.9 and newer
-Execution: Immediate
-Description:
-This command queries the EBB for the current pen state. It will return PenStatus
-of 1 if the pen is up and 0 if the pen is down. If a pen up/down command is
-pending in the FIFO, it will only report the new state of the pen after the pen
-move has been started.
-
-Example: QP\r
-Example Return Packet: 1<NL><CR>OK<NL><CR>
-Version History: Added in v1.9
-*/
-void EBBParser::queryPen()
-{
-    const char state = (penState == penUpPos) ? '0' : '1';
-    mStream.print(String(state) + "\r\n");
-    sendAck();
-}
-
-/**
-"QB" — Query Button
-
-Command: QB<CR>
-Response: state<NL><CR>OK<NL><CR>
-Firmware versions: v1.9.2 and newer
-Execution: Immediate
-Description:
-This command asks the EBB if the PRG button has been pressed since the last QB
-query or not.
-
-The returned value state is 1 if the PRG button has been pressed since the last
-QB query, and 0 otherwise.
-
-Version History: Added in v1.9.2
-*/
-void EBBParser::queryButton()
-{
-    mStream.print(String(prgButtonState) + "\r\n");
-    sendAck();
-    prgButtonState = false;
-}
-
-/**
-"QL" — Query Layer
-
-Command: QL<CR>
-Response: CurrentLayerValue<NL><CR>OK<NL><CR>
-Firmware versions: v1.9.2 and newer
-Execution: Immediate
-Description:
-This command asks the EBB to report back the current value of the Layer
-variable. This variable is set with the SL command, as a single unsigned byte.
-
-Example: QL\r
-Example Return Packet: 4<NL><CR>OK<NL><CR>
-Version History: Added in v1.9.2
-*/
-void EBBParser::queryLayer()
-{
-    mStream.print(String(layer) + "\r\n");
-    sendAck();
-}
-
-/**
-"SL" — Set Layer
-
-Command: SL,NewLayerValue<CR>
-Response: OK<NL><CR>
-Firmware versions: v1.9.2 and newer
-Execution: Immediate
-Arguments:
-NewLayerValue is an integer between 0 and 127.
-Description:
-This command sets the value of the Layer variable, which can be read by the QL
-query. This variable is a single unsigned byte, and is available for the user to
-store a single variable as needed.
-
-Example: SL,4\r Set the Layer variable to 4.
-Example: SL,125\r Set the Layer variable to 125.
-Version History: Added in v1.9.2
-*/
-void EBBParser::setLayer(const char* arg)
-{
-    if (arg == NULL)
-        sendError();
-
-    layer = atoi(arg);
-    sendAck();
-}
-
-/**
-"QN" — Query node count
-
-Command: QN<CR>
-Response: NodeCount<NL><CR>OK<NL><CR>
-Firmware versions: v1.9.2 and newer
-Execution: Immediate
-Description: Query the value of the Node Counter.
-This command asks the EBB what the current value of the Node Counter is. The
-Node Counter is an unsigned long int (4 bytes) value that gets incremented or
-decrimented with the NI and ND commands, or set to a particular value with the
-SN command. The Node Counter can be used to keep track of progress during
-various operations as needed.
-
-The value of the node counter can also be manipulated with the following
-commands:
-
-SN — Set Node count
-NI — Node count Increment
-ND — Node count Decrement
-CN — Clear node count [obsolete]
-Example Return Packet: 1234567890<NL><CR> then OK<NL><CR>
-Version History: Added in v1.9.2
-*/
-void EBBParser::queryNodeCount()
-{
-    mStream.print(String(nodeCount) + "\r\n");
-    sendAck();
-}
-
-/**
-"SN" — Set node count
-
-Command: SN,value<CR>
-Response: OK<NL><CR>
-Firmware versions: v1.9.5 and newer
-Execution: Immediate
-Arguments:
-value is an unsigned long (four byte) integer.
-Description:
-This command sets the Node Counter to value.
-
-See the "QN" command for a description of the node counter and its operations.
-
-Example: SN,123456789\r Set node counter to 123456789.
-Version History: Added in v1.9.5
-*/
-void EBBParser::setNodeCount(const char* arg)
-{
-    if (arg == NULL)
-        sendError();
-
-    nodeCount = atoi(arg);
-    sendAck();
-}
-
-/**
-"NI" — Node Count Increment
-
-Command: NI<CR>
-Response: OK<NL><CR>
-Firmware versions: v1.9.5 and newer
-Execution: Immediate
-Description:
-This command increments the 32 bit Node Counter by 1.
-
-See the "QN" command for a description of the node counter and its operations.
-
-Version History: Added in v1.9.5
-*/
-void EBBParser::nodeCountIncrement()
-{
-    nodeCount++;
-    sendAck();
-}
-
-/**
-"ND" — Node Count Decrement
-
-Command: ND<CR>
-Response: OK<NL><CR>
-Firmware versions: v1.9.5 and newer
-Execution: Immediate
-Description:
-This command decrements the 32 bit Node Counter by 1.
-
-See the "QN" command for a description of the node counter and its operations.
-
-Version History: Added in v1.9.5
-*/
-void EBBParser::nodeCountDecrement()
-{
-    nodeCount--;
-    sendAck();
-}
-
-/**
-"SM" — Stepper Move
-
-Command: SM,duration,axis1[,axis2]<CR>
-Response: OK<NL><CR>
-Firmware versions: all (with changes)
-Execution: Added to FIFO motion queue
-Arguments:
-duration is an integer in the range from 1 to 16777215, giving time in
-milliseconds.
-axis1 and axis2 are integers, each in the range from -16777215 to 16777215,
-giving movement distance in steps.
-Description:
-Use this command to make the motors draw a straight line at constant velocity,
-or to add a delay to the motion queue.
-
-If both axis1 and axis2 are zero, then a delay of duration ms is executed. axis2
-is an optional value, and if it is not included in the command, zero steps are
-assumed for axis 2.
-
-The sign of axis1 and axis2 represent the direction each motor should turn.
-
-The minimum speed at which the EBB can generate steps for each motor is 1.31
-steps/second. The maximum speed is 25,000 steps/second. If the SM command finds
-that this speed range will be violated on either axis, it will output an error
-message declaring such and it will not complete the move.
-
-Note that internally the EBB generates an Interrupt Service Routine (ISR) at the
-25 kHz rate. Each time the ISR fires, the EBB determines if a step needs to be
-taken for a given axis or not. The practical result of this is that all steps
-will be 'quantized' to the 25 kHz (40 μs) time intervals, and thus as the step
-rate gets close to 25 kHz the 'correct' time between steps will not be
-generated, but instead each step will land on a 40 μs tick in time. In almost
-all cases normally used by the EBB, this doesn't make any difference because the
-overall proper length for the entire move will be correct.
-
-A value of 0 for duration is invalid and will be rejected.
-
-The EBB firmware can sustain moves of 3ms of more continuously without any
-inter-move gaps in time.
-
-Example: SM,1000,250,-766\r Move axis1 by 250 steps and axis2 by -766 steps, in
-1000 ms of duration.
-*/
-void EBBParser::stepperMove(const char* arg1, const char* arg2, const char* arg3)
-{
-    moveToDestination();
-
-    if (!arg1 || !arg2 || !arg3) {
-        sendError();
-        return;
-    }
-
-    int duration = atoi(arg1);
-    int axis1 = atoi(arg2);
-    int axis2 = atoi(arg3);
-
-    sendAck();
-
-    if ((axis1 == 0) && (axis2 == 0)) {
-        delay(duration);
-        return;
-    }
-
-    prepareMove(duration, axis1, axis2);
-}
-
-/**
-"SP" — Set Pen State
-
-Command: SP,value[,duration[,portBpin]]<CR>
-Response: OK<NL><CR>
-Firmware versions: all (with changes)
-Execution: Added to FIFO motion queue
-Arguments:
-value is either 0 or 1, indicating to raise or lower the pen.
-duration (optional) is an integer from 1 to 65535, which gives a delay in
-milliseconds.
-portBpin (optional) is an integer from 0 through 7.
-Description:
-This command instructs the pen to go up or down.
-
-When a value of 1 is used, the servo will be moved to the servo_min value (as
-set by the "SC,4" command).
-When a value of 0 is used, the servo will be moved to the servo_max value (as
-set by the "SC,5" command below).
-Note that conventionally, we have used the servo_min ("SC,4") value as the 'Pen
-up position', and the servo_max ("SC,5") value as the 'Pen down position'.
-
-The duration argument is in milliseconds. It represents the total length of time
-between when the pen move is started, and when the next command will be
-executed. Note that this is not related to how fast the pen moves, which is set
-with the SC command. Rather, it is an intentional delay of a given duration, to
-force the EBB not to execute the next command (often an SM) for some length of
-time, which allows the pen move to complete and possibly some extra settling
-time before moving the other motors.
-
-If no duration argument is specified, a value of 0 milliseconds is used
-internally.
-
-The optional portBpin argument allows one to specify which portB pin of the MCU
-the output will use. If none is specified, pin 1 (the default) will be used.
-
-Default positions:The default position for the RC servo output (RB1) on reset is
-the 'Pen up position' (servo_min), and at boot servo_min is set to 12000 which
-results in a pulse width of 1.0 ms on boot. servo_max is set to 16000 on boot,
-so the down position will be 1.33 ms unless changed with the "SC,5" Command.
-
-Digital outputs: On older EBB hardware versions 1.1, 1.2 and 1.3, this command
-will make the solenoid output turn on and off. On all EBB versions it will make
-the RC servo output on RB1 move to the up or down position. Also, by default, it
-will turn on RB4 or turn off RB4 as a simple digital output, so that you could
-use this to trigger a laser for example.
-
-Example: SP,1<CR> Move pen-lift servo motor to servo_min position.
-*/
-void EBBParser::setPenState(const char* arg1, const char* arg2, const char* arg3)
-{
-    moveToDestination();
-
-    if (arg1 != NULL) {
-        int cmd = atoi(arg1);
-        switch (cmd) {
-        case 0: // Lower
-            sendAck();
-            setPenDown();
-            break;
-        case 1: // Raise
-            sendAck();
-            setPenUp();
-            break;
-        default:
-            sendError();
-        }
-    }
-    if (arg2 != NULL) {
-        int value = atoi(arg2);
-        delay(value);
-    }
-}
-
-/**
-"TP" — Toggle Pen
-
-Command: TP[,duration]<CR>
-Response: OK<NL><CR>
-Firmware versions: v1.9 and newer
-Execution: Immediate
-Arguments:
-duration: (Optional) an integer in the range of 1 to 65535, giving an delay in
-milliseconds.
-Description:
-This command toggles the state of the pen (up->down and down->up). EBB firmware
-resets with pen in 'up' (servo_min) state.
-
-Note that conventionally, we have used the servo_min ("SC,4") value as the 'Pen
-up position', and the servo_max ("SC,5") value as the 'Pen down position'.
-
-The optional duration argument is in milliseconds. It represents the total
-length of time between when the pen move is started, and when the next command
-will be executed. Note that this is not related to how fast the pen moves, which
-is set with the SC command. Rather, it is an intentional delay of a given
-duration, to force the EBB not to execute the next command (often an SM) for
-some length of time, which allows the pen move to complete and possibly some
-extra settling time before moving the other motors.
-
-If no duration argument is specified, a value of 0 milliseconds is used
-internally.
-*/
-void EBBParser::togglePen(const char* arg)
-{
-    moveToDestination();
-
-    int value = (arg != NULL) ? atoi(arg) : 500;
-
-    doTogglePen();
-    sendAck();
-    delay(value);
 }
 
 /**
@@ -630,7 +260,7 @@ reproducibility.
 
 Note that this version of the command is only for EBB hardware v1.1.
 */
-void EBBParser::enableMotors(const char* arg1, const char* arg2)
+void EBBParser::parseEM(const char* arg1, const char* arg2)
 {
     if (arg1 == NULL && arg2 == NULL)
         sendError();
@@ -643,6 +273,188 @@ void EBBParser::enableMotors(const char* arg1, const char* arg2)
             enableMotor(axis, value);
         }
     }
+    sendAck();
+}
+
+/**
+"ND" — Node Count Decrement
+
+Command: ND<CR>
+Response: OK<NL><CR>
+Firmware versions: v1.9.5 and newer
+Execution: Immediate
+Description:
+This command decrements the 32 bit Node Counter by 1.
+
+See the "QN" command for a description of the node counter and its operations.
+
+Version History: Added in v1.9.5
+*/
+void EBBParser::parseND()
+{
+    nodeCount--;
+    sendAck();
+}
+
+/**
+"NI" — Node Count Increment
+
+Command: NI<CR>
+Response: OK<NL><CR>
+Firmware versions: v1.9.5 and newer
+Execution: Immediate
+Description:
+This command increments the 32 bit Node Counter by 1.
+
+See the "QN" command for a description of the node counter and its operations.
+
+Version History: Added in v1.9.5
+*/
+void EBBParser::parseNI()
+{
+    nodeCount++;
+    sendAck();
+}
+
+
+/**
+"PO" — Pin Output
+
+Command: PO,Port,Pin,Value<CR>
+Response: OK<NL><CR>
+Firmware versions: All
+Execution: Immediate
+Arguments:
+Port: is one of the following letters: A,B,C,D,E. It specifies which port on the
+processor is to be used for the output.
+Pin: is an integer in the range from 0 through 7. It specifies the pin to be
+used for the output.
+Value: is either 0 or 1. It specifies the logical value to be output on the pin.
+Description:
+This command outputs a digital value of a 0 (0V) or 1 (3.3V) on one of the pins
+on the processor, as specified by Port and Pin.
+
+This command will not change a pin's direction to output first, so you must set
+the pin's direction to be an output using the PD command first if you want
+anything to come out of the pin.
+
+This command is a very low-level I/O command. Many other higher level commands
+(like SM, S2, etc.) will over-write the output state of pins that they need.
+This commands allows you low-level access to every pin on the processor.
+
+Example: PO,C,7,1\r This command would set the pin RC7 (or Port C, pin 7) to a
+high value.
+*/
+void EBBParser::parsePO(const char* arg1, const char* arg2, const char* arg3)
+{
+    if (arg1 == NULL || arg2 == NULL || arg3 == NULL) {
+        sendError();
+        return;
+    }
+    // PO,B,3,0 = disable engraver
+    // PO,B,3,1 = enable engraver
+    if (arg1[0] == 'B' && arg2[0] == '3') {
+        int val = atoi(arg3);
+        digitalWrite(ENGRAVER_PIN, val);
+    }
+    sendAck();
+}
+
+/**
+"QB" — Query Button
+
+Command: QB<CR>
+Response: state<NL><CR>OK<NL><CR>
+Firmware versions: v1.9.2 and newer
+Execution: Immediate
+Description:
+This command asks the EBB if the PRG button has been pressed since the last QB
+query or not.
+
+The returned value state is 1 if the PRG button has been pressed since the last
+QB query, and 0 otherwise.
+
+Version History: Added in v1.9.2
+*/
+void EBBParser::parseQB()
+{
+    mStream.print(String(prgButtonState) + "\r\n");
+    sendAck();
+    prgButtonState = false;
+}
+
+/**
+"QL" — Query Layer
+
+Command: QL<CR>
+Response: CurrentLayerValue<NL><CR>OK<NL><CR>
+Firmware versions: v1.9.2 and newer
+Execution: Immediate
+Description:
+This command asks the EBB to report back the current value of the Layer
+variable. This variable is set with the SL command, as a single unsigned byte.
+
+Example: QL\r
+Example Return Packet: 4<NL><CR>OK<NL><CR>
+Version History: Added in v1.9.2
+*/
+void EBBParser::parseQL()
+{
+    mStream.print(String(layer) + "\r\n");
+    sendAck();
+}
+
+/**
+"QN" — Query node count
+
+Command: QN<CR>
+Response: NodeCount<NL><CR>OK<NL><CR>
+Firmware versions: v1.9.2 and newer
+Execution: Immediate
+Description: Query the value of the Node Counter.
+This command asks the EBB what the current value of the Node Counter is. The
+Node Counter is an unsigned long int (4 bytes) value that gets incremented or
+decrimented with the NI and ND commands, or set to a particular value with the
+SN command. The Node Counter can be used to keep track of progress during
+various operations as needed.
+
+The value of the node counter can also be manipulated with the following
+commands:
+
+SN — Set Node count
+NI — Node count Increment
+ND — Node count Decrement
+CN — Clear node count [obsolete]
+Example Return Packet: 1234567890<NL><CR> then OK<NL><CR>
+Version History: Added in v1.9.2
+*/
+void EBBParser::parseQN()
+{
+    mStream.print(String(nodeCount) + "\r\n");
+    sendAck();
+}
+
+/**
+"QP" — Query Pen
+
+Command: QP<CR>
+Response: PenStatus<NL><CR>OK<NL><CR>
+Firmware versions: v1.9 and newer
+Execution: Immediate
+Description:
+This command queries the EBB for the current pen state. It will return PenStatus
+of 1 if the pen is up and 0 if the pen is down. If a pen up/down command is
+pending in the FIFO, it will only report the new state of the pen after the pen
+move has been started.
+
+Example: QP\r
+Example Return Packet: 1<NL><CR>OK<NL><CR>
+Version History: Added in v1.9
+*/
+void EBBParser::parseQP()
+{
+    const char state = (penState == penUpPos) ? '0' : '1';
+    mStream.print(String(state) + "\r\n");
     sendAck();
 }
 
@@ -721,7 +533,7 @@ about 0.66 ms.
 Example: SC,1,1\r Enable only the RC servo for pen lift; disable solenoid
 control output.
 */
-void EBBParser::stepperAndServoModeConfigure(const char* arg1, const char* arg2)
+void EBBParser::parseSC(const char* arg1, const char* arg2)
 {
     if ((arg1 != NULL) && (arg2 != NULL)) {
         int cmd = atoi(arg1);
@@ -762,49 +574,6 @@ void EBBParser::stepperAndServoModeConfigure(const char* arg1, const char* arg2)
 }
 
 /**
-"PO" — Pin Output
-
-Command: PO,Port,Pin,Value<CR>
-Response: OK<NL><CR>
-Firmware versions: All
-Execution: Immediate
-Arguments:
-Port: is one of the following letters: A,B,C,D,E. It specifies which port on the
-processor is to be used for the output.
-Pin: is an integer in the range from 0 through 7. It specifies the pin to be
-used for the output.
-Value: is either 0 or 1. It specifies the logical value to be output on the pin.
-Description:
-This command outputs a digital value of a 0 (0V) or 1 (3.3V) on one of the pins
-on the processor, as specified by Port and Pin.
-
-This command will not change a pin's direction to output first, so you must set
-the pin's direction to be an output using the PD command first if you want
-anything to come out of the pin.
-
-This command is a very low-level I/O command. Many other higher level commands
-(like SM, S2, etc.) will over-write the output state of pins that they need.
-This commands allows you low-level access to every pin on the processor.
-
-Example: PO,C,7,1\r This command would set the pin RC7 (or Port C, pin 7) to a
-high value.
-*/
-void EBBParser::pinOutput(const char* arg1, const char* arg2, const char* arg3)
-{
-    if (arg1 == NULL || arg2 == NULL || arg3 == NULL) {
-        sendError();
-        return;
-    }
-    // PO,B,3,0 = disable engraver
-    // PO,B,3,1 = enable engraver
-    if (arg1[0] == 'B' && arg2[0] == '3') {
-        int val = atoi(arg3);
-        digitalWrite(ENGRAVER_PIN, val);
-    }
-    sendAck();
-}
-
-/**
 "SE" — Set Engraver
 
 Command: SE,state[,power[,use_motion_queue]]<CR>
@@ -838,13 +607,246 @@ Example: SE,0\r Turns off the engraver output
 Example: SE,0,0,1\r Adds a command to the motion queue, that (when executed)
 turns off the engraver output.
 */
-void EBBParser::setEngraver(const char* arg)
+void EBBParser::parseSE(const char* arg)
 {
     if (arg != NULL) {
         int val = atoi(arg);
         digitalWrite(ENGRAVER_PIN, val);
     }
     sendAck();
+}
+
+/**
+"SL" — Set Layer
+
+Command: SL,NewLayerValue<CR>
+Response: OK<NL><CR>
+Firmware versions: v1.9.2 and newer
+Execution: Immediate
+Arguments:
+NewLayerValue is an integer between 0 and 127.
+Description:
+This command sets the value of the Layer variable, which can be read by the QL
+query. This variable is a single unsigned byte, and is available for the user to
+store a single variable as needed.
+
+Example: SL,4\r Set the Layer variable to 4.
+Example: SL,125\r Set the Layer variable to 125.
+Version History: Added in v1.9.2
+*/
+void EBBParser::parseSL(const char* arg)
+{
+    if (arg == NULL)
+        sendError();
+
+    layer = atoi(arg);
+    sendAck();
+}
+
+/**
+"SM" — Stepper Move
+
+Command: SM,duration,axis1[,axis2]<CR>
+Response: OK<NL><CR>
+Firmware versions: all (with changes)
+Execution: Added to FIFO motion queue
+Arguments:
+duration is an integer in the range from 1 to 16777215, giving time in
+milliseconds.
+axis1 and axis2 are integers, each in the range from -16777215 to 16777215,
+giving movement distance in steps.
+Description:
+Use this command to make the motors draw a straight line at constant velocity,
+or to add a delay to the motion queue.
+
+If both axis1 and axis2 are zero, then a delay of duration ms is executed. axis2
+is an optional value, and if it is not included in the command, zero steps are
+assumed for axis 2.
+
+The sign of axis1 and axis2 represent the direction each motor should turn.
+
+The minimum speed at which the EBB can generate steps for each motor is 1.31
+steps/second. The maximum speed is 25,000 steps/second. If the SM command finds
+that this speed range will be violated on either axis, it will output an error
+message declaring such and it will not complete the move.
+
+Note that internally the EBB generates an Interrupt Service Routine (ISR) at the
+25 kHz rate. Each time the ISR fires, the EBB determines if a step needs to be
+taken for a given axis or not. The practical result of this is that all steps
+will be 'quantized' to the 25 kHz (40 μs) time intervals, and thus as the step
+rate gets close to 25 kHz the 'correct' time between steps will not be
+generated, but instead each step will land on a 40 μs tick in time. In almost
+all cases normally used by the EBB, this doesn't make any difference because the
+overall proper length for the entire move will be correct.
+
+A value of 0 for duration is invalid and will be rejected.
+
+The EBB firmware can sustain moves of 3ms of more continuously without any
+inter-move gaps in time.
+
+Example: SM,1000,250,-766\r Move axis1 by 250 steps and axis2 by -766 steps, in
+1000 ms of duration.
+*/
+void EBBParser::parseSM(const char* arg1, const char* arg2, const char* arg3)
+{
+    moveToDestination();
+
+    if (!arg1 || !arg2 || !arg3) {
+        sendError();
+        return;
+    }
+
+    int duration = atoi(arg1);
+    int axis1 = atoi(arg2);
+    int axis2 = atoi(arg3);
+
+    sendAck();
+
+    if ((axis1 == 0) && (axis2 == 0)) {
+        delay(duration);
+        return;
+    }
+
+    prepareMove(duration, axis1, axis2);
+}
+
+/**
+"SN" — Set node count
+
+Command: SN,value<CR>
+Response: OK<NL><CR>
+Firmware versions: v1.9.5 and newer
+Execution: Immediate
+Arguments:
+value is an unsigned long (four byte) integer.
+Description:
+This command sets the Node Counter to value.
+
+See the "QN" command for a description of the node counter and its operations.
+
+Example: SN,123456789\r Set node counter to 123456789.
+Version History: Added in v1.9.5
+*/
+void EBBParser::parseSN(const char* arg)
+{
+    if (arg == NULL)
+        sendError();
+
+    nodeCount = atoi(arg);
+    sendAck();
+}
+
+/**
+"SP" — Set Pen State
+
+Command: SP,value[,duration[,portBpin]]<CR>
+Response: OK<NL><CR>
+Firmware versions: all (with changes)
+Execution: Added to FIFO motion queue
+Arguments:
+value is either 0 or 1, indicating to raise or lower the pen.
+duration (optional) is an integer from 1 to 65535, which gives a delay in
+milliseconds.
+portBpin (optional) is an integer from 0 through 7.
+Description:
+This command instructs the pen to go up or down.
+
+When a value of 1 is used, the servo will be moved to the servo_min value (as
+set by the "SC,4" command).
+When a value of 0 is used, the servo will be moved to the servo_max value (as
+set by the "SC,5" command below).
+Note that conventionally, we have used the servo_min ("SC,4") value as the 'Pen
+up position', and the servo_max ("SC,5") value as the 'Pen down position'.
+
+The duration argument is in milliseconds. It represents the total length of time
+between when the pen move is started, and when the next command will be
+executed. Note that this is not related to how fast the pen moves, which is set
+with the SC command. Rather, it is an intentional delay of a given duration, to
+force the EBB not to execute the next command (often an SM) for some length of
+time, which allows the pen move to complete and possibly some extra settling
+time before moving the other motors.
+
+If no duration argument is specified, a value of 0 milliseconds is used
+internally.
+
+The optional portBpin argument allows one to specify which portB pin of the MCU
+the output will use. If none is specified, pin 1 (the default) will be used.
+
+Default positions:The default position for the RC servo output (RB1) on reset is
+the 'Pen up position' (servo_min), and at boot servo_min is set to 12000 which
+results in a pulse width of 1.0 ms on boot. servo_max is set to 16000 on boot,
+so the down position will be 1.33 ms unless changed with the "SC,5" Command.
+
+Digital outputs: On older EBB hardware versions 1.1, 1.2 and 1.3, this command
+will make the solenoid output turn on and off. On all EBB versions it will make
+the RC servo output on RB1 move to the up or down position. Also, by default, it
+will turn on RB4 or turn off RB4 as a simple digital output, so that you could
+use this to trigger a laser for example.
+
+Example: SP,1<CR> Move pen-lift servo motor to servo_min position.
+*/
+void EBBParser::parseSP(const char* arg1, const char* arg2, const char* arg3)
+{
+    moveToDestination();
+
+    if (arg1 != NULL) {
+        int cmd = atoi(arg1);
+        switch (cmd) {
+        case 0: // Lower
+            sendAck();
+            setPenDown();
+            break;
+        case 1: // Raise
+            sendAck();
+            setPenUp();
+            break;
+        default:
+            sendError();
+        }
+    }
+    if (arg2 != NULL) {
+        int value = atoi(arg2);
+        delay(value);
+    }
+}
+
+/**
+"TP" — Toggle Pen
+
+Command: TP[,duration]<CR>
+Response: OK<NL><CR>
+Firmware versions: v1.9 and newer
+Execution: Immediate
+Arguments:
+duration: (Optional) an integer in the range of 1 to 65535, giving an delay in
+milliseconds.
+Description:
+This command toggles the state of the pen (up->down and down->up). EBB firmware
+resets with pen in 'up' (servo_min) state.
+
+Note that conventionally, we have used the servo_min ("SC,4") value as the 'Pen
+up position', and the servo_max ("SC,5") value as the 'Pen down position'.
+
+The optional duration argument is in milliseconds. It represents the total
+length of time between when the pen move is started, and when the next command
+will be executed. Note that this is not related to how fast the pen moves, which
+is set with the SC command. Rather, it is an intentional delay of a given
+duration, to force the EBB not to execute the next command (often an SM) for
+some length of time, which allows the pen move to complete and possibly some
+extra settling time before moving the other motors.
+
+If no duration argument is specified, a value of 0 milliseconds is used
+internally.
+*/
+void EBBParser::parseTP(const char* arg)
+{
+    moveToDestination();
+
+    int value = (arg != NULL) ? atoi(arg) : 500;
+
+    doTogglePen();
+    sendAck();
+    delay(value);
 }
 
 /**
@@ -859,7 +861,7 @@ This command prints out the version string of the firmware currently running on
 the EBB. The actual version string returned may be different from the example
 above.
 */
-void EBBParser::sendVersion()
+void EBBParser::parseV()
 {
     mStream.print("EBBv13_and_above Protocol emulated by Eggduino-Firmware V1.x\r\n");
 }

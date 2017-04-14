@@ -26,32 +26,32 @@ public:
     void doTogglePen();
 
 private:
-    void queryPen();
-    void queryButton();
-    void queryLayer();
-    void setLayer(const char* arg);
-    void queryNodeCount();
-    void setNodeCount(const char* arg);
-    void nodeCountIncrement();
-    void nodeCountDecrement();
-    void stepperMove(const char* arg1, const char* arg2, const char* arg3);
-    void setPenState(const char* arg1, const char* arg2, const char* arg3);
-    void togglePen(const char* arg);
-    void enableMotors(const char* arg1, const char* arg2);
-    void stepperAndServoModeConfigure(const char* arg1, const char* arg2);
-    void pinOutput(const char* arg1, const char* arg2, const char* arg3);
-    void setEngraver(const char* arg);
-    void sendVersion();
+    void parseStream();
+    void sendAck();
+    void sendError();
+
+    void parseEM(const char* arg1, const char* arg2);
+    void parseND();
+    void parseNI();
+    void parsePO(const char* arg1, const char* arg2, const char* arg3);
+    void parseQB();
+    void parseQL();
+    void parseQN();
+    void parseQP();
+    void parseSC(const char* arg1, const char* arg2);
+    void parseSE(const char* arg);
+    void parseSL(const char* arg);
+    void parseSM(const char* arg1, const char* arg2, const char* arg3);
+    void parseSN(const char* arg);
+    void parseSP(const char* arg1, const char* arg2, const char* arg3);
+    void parseTP(const char* arg);
+    void parseV();
 
     void setPenUp();
     void setPenDown();
     void prepareMove(int duration, int penStepsEBB, int rotStepsEBB);
     void moveToDestination();
     void moveOneStep();
-
-    void readStream();
-    void sendAck();
-    void sendError();
 
     Stream& mStream;
 
