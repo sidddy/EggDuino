@@ -18,24 +18,23 @@ public:
     virtual void processEvents();
 
 protected:
-    virtual void enableMotor(int axis, int value) = 0;
+    virtual void enableMotor(int axis, bool state) = 0;
     virtual void stepperMove(int duration, int penStepsEBB, int rotStepsEBB) = 0;
     virtual void moveOneStep() = 0;
     virtual void moveToDestination() = 0;
 
-    virtual void setPenState(int upDown) = 0;
-    virtual int getPenState() = 0;
+    virtual void setPenState(bool up) = 0;
+    virtual bool getPenState() = 0;
     virtual void setPenUpPos(int pos) = 0;
     virtual void setPenDownPos(int pos) = 0;
 
     virtual void setServoRateUp(int rate) = 0;
     virtual void setServoRateDown(int rate) = 0;
 
-    virtual int getPrgButtonState() = 0;
+    virtual bool getPrgButtonState() = 0;
     virtual void setPinOutput(char port, int pin, int value) = 0;
 
-    virtual void setEngraverState(int state) = 0;
-    virtual void setEngraverPower(int power) = 0;
+    virtual void setEngraverState(bool state, int power) = 0;
 private:
     void parseStream();
     void sendAck();

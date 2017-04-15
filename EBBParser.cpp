@@ -126,8 +126,9 @@ void EBBParser::parseEM(const char* arg1, const char* arg2)
 
     for (int axis = 0; axis < 2; ++axis) {
         if (args[axis] != NULL) {
-            const int value = atoi(args[axis]);
-            enableMotor(axis, value);
+            // ignore microstepping parameter since the inskape plugin assume 16 by default.
+            const bool state = atoi(args[axis]) != 0;
+            enableMotor(axis, state);
         }
     }
     sendAck();
@@ -231,7 +232,7 @@ Version History: Added in v1.9.2
 */
 void EBBParser::parseQB()
 {
-    mStream.print(String(getPrgButtonState()) + "\r\n");
+    mStream.print(String(getPrgButtonState() ? '1' : '0') + "\r\n");
     sendAck();
 }
 
@@ -305,8 +306,7 @@ Version History: Added in v1.9
 */
 void EBBParser::parseQP()
 {
-    const char state = (getPenState() == 0) ? '0' : '1';
-    mStream.print(String(state) + "\r\n");
+    mStream.print(String(getPenState() ? '1' : '0') + "\r\n");
     sendAck();
 }
 
@@ -459,13 +459,11 @@ void EBBParser::parseSE(const char* arg1, const char* arg2, const char* arg3)
         return;
     }
 
-    int state = atoi(arg1);
-    setEngraverState(state);
+    bool state = atoi(arg1);
+    int power = (arg2 != NULL) ? atoi(arg2) : 512;
 
-    if (arg2 != NULL) {
-        int power = atoi(arg2);
-        setEngraverPower(power);
-    }
+    setEngraverState(state, power);
+
     sendAck();
 }
 
@@ -654,10 +652,10 @@ void EBBParser::parseSP(const char* arg1, const char* arg2, const char* arg3)
     int cmd = atoi(arg1);
     switch (cmd) {
     case 0: // Lower
-        setPenState(0);
+        setPenState(false);
         break;
     case 1: // Raise
-        setPenState(1);
+        setPenState(true);
         break;
     default:
         sendError();
@@ -705,11 +703,8 @@ void EBBParser::parseTP(const char* arg)
 
     int value = (arg != NULL) ? atoi(arg) : 500;
 
-    if (getPenState() == 1) {
-        setPenState(0);
-    } else {
-        setPenState(1);
-    }
+    setPenState(!getPenState());
+
     sendAck();
     delay(value);
 }

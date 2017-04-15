@@ -16,35 +16,32 @@ public:
     virtual void processEvents();
 
 protected:
-    virtual void enableMotor(int axis, int value);
+    virtual void enableMotor(int axis, bool state);
     virtual void stepperMove(int duration, int penStepsEBB, int rotStepsEBB);
 
-    virtual void setPenState(int upDown);
-    virtual int getPenState();
+    virtual void setPenState(bool up);
+    virtual bool getPenState();
     virtual void setPenUpPos(int pos);
     virtual void setPenDownPos(int pos);
 
     virtual void setServoRateUp(int rate);
     virtual void setServoRateDown(int rate);
 
-    virtual int getPrgButtonState();
+    virtual bool getPrgButtonState();
 
     virtual void moveToDestination();
     virtual void moveOneStep();
 
     virtual void setPinOutput(char port, int pin, int value);
 
-    virtual void setEngraverState(int state);
-    virtual void setEngraverPower(int power)
-    {
-    }
+    virtual void setEngraverState(bool state, int power);
 
 private:
     AccelStepper rotMotor;
     AccelStepper penMotor;
     VarSpeedServo penServo;
 
-    int penState;
+    bool penState;
     short penUpPos; // eeprom!
     short penDownPos; // eeprom!
 

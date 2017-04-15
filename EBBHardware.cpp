@@ -16,7 +16,7 @@ EBBHardware::EBBHardware(Stream& stream)
     : EBBParser(stream)
     , rotMotor(1, X_STEP_PIN, X_DIR_PIN)
     , penMotor(1, Y_STEP_PIN, Y_DIR_PIN)
-    , penState(1)
+    , penState(false)
     , penUpPos(5) // can be overwritten from EBB-Command SC
     , penDownPos(20) // can be overwritten from EBB-Command SC
     , servoRateUp(0)
@@ -52,8 +52,8 @@ void EBBHardware::init()
     rotMotor.setAcceleration(10000.0);
     penMotor.setMaxSpeed(2000.0);
     penMotor.setAcceleration(10000.0);
-    enableMotor(0, 0);
-    enableMotor(1, 0);
+    enableMotor(0, false);
+    enableMotor(1, false);
     penServo.attach(SERVO_PIN);
     penServo.write(penState ? penUpPos : penDownPos);
 }
@@ -86,21 +86,13 @@ void EBBHardware::processEvents()
     EBBParser::processEvents();
 }
 
-void EBBHardware::enableMotor(int axis, int value)
+void EBBHardware::enableMotor(int axis, bool state)
 {
     const uint8_t pin = (axis == 0) ? X_ENABLE_PIN : Y_ENABLE_PIN;
-    switch (value) {
-    case 0:
-        digitalWrite(pin, HIGH);
-        break;
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-        digitalWrite(pin, LOW);
-        break;
-    }
-    motorEnabled = value;
+
+    digitalWrite(pin, state ? LOW : HIGH);
+
+    motorEnabled = state;
 }
 
 void EBBHardware::stepperMove(int duration, int axis1, int axis2)
@@ -171,22 +163,22 @@ void EBBHardware::setPinOutput(char port, int pin, int value)
     }
 }
 
-void EBBHardware::setEngraverState(int state)
+void EBBHardware::setEngraverState(bool state, int power)
 {
     digitalWrite(ENGRAVER_PIN, state);
 }
 
-void EBBHardware::setPenState(int upDown)
+void EBBHardware::setPenState(bool up)
 {
-    if (upDown == 0) {
-        penServo.write(penDownPos, servoRateDown, true);
-    } else {
+    if (up) {
         penServo.write(penUpPos, servoRateUp, true);
+    } else {
+        penServo.write(penDownPos, servoRateDown, true);
     }
-    penState = upDown;
+    penState = up;
 }
 
-int EBBHardware::getPenState()
+bool EBBHardware::getPenState()
 {
     return penState;
 }
@@ -217,10 +209,9 @@ void EBBHardware::setServoRateDown(int rate)
     EEPROM.put(EEPROM_PEN_DOWN_RATE, servoRateDown);
 }
 
-int EBBHardware::getPrgButtonState()
+bool EBBHardware::getPrgButtonState()
 {
-    int state = prgButtonState;
-    prgButtonState = 0;
+    bool state = prgButtonState;
+    prgButtonState = false;
     return state;
 }
-
