@@ -13,7 +13,7 @@
 #define EEPROM_PEN_DOWN_RATE 6
 
 EBBParser::EBBParser(Stream& stream)
-    : motorsEnabled(false)
+    : motorEnabled(false)
     , prgButtonState(false)
     , mStream(stream)
     , rotMotor(1, X_STEP_PIN, X_DIR_PIN)
@@ -49,7 +49,8 @@ void EBBParser::init()
     rotMotor.setAcceleration(10000.0);
     penMotor.setMaxSpeed(2000.0);
     penMotor.setAcceleration(10000.0);
-    motorsOff();
+    enableMotor(0, 0);
+    enableMotor(1, 0);
     penServo.attach(SERVO_PIN);
     penServo.write(penState);
 }
@@ -70,25 +71,26 @@ void EBBParser::sendError()
     mStream.print("!8 Err: Unknown command\r\n");
 }
 
-void EBBParser::motorsOff()
+void EBBParser::enableMotor(int axis, int value)
 {
-    digitalWrite(X_ENABLE_PIN, HIGH);
-    digitalWrite(Y_ENABLE_PIN, HIGH);
-    motorsEnabled = false;
-}
-
-void EBBParser::motorsOn()
-{
-    digitalWrite(X_ENABLE_PIN, LOW);
-    digitalWrite(Y_ENABLE_PIN, LOW);
-    motorsEnabled = true;
+    const uint8_t pin = (axis == 0) ? X_ENABLE_PIN : Y_ENABLE_PIN;
+    switch(value)
+    {
+        case 0:
+            digitalWrite(pin, HIGH);
+        break;
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+            digitalWrite(pin, LOW);
+        break;
+    }
+    motorEnabled = value;
 }
 
 void EBBParser::prepareMove(int duration, int axis1, int axis2)
 {
-    if (!motorsEnabled) {
-        motorsOn();
-    }
     // if coordinatessystems are identical
     if ((1 == rotStepCorrection) && (1 == penStepCorrection)) {
         // set Coordinates and Speed
@@ -630,39 +632,18 @@ Note that this version of the command is only for EBB hardware v1.1.
 */
 void EBBParser::enableMotors(const char* arg1, const char* arg2)
 {
-    // values parsed
-    if ((arg1 != NULL) && (arg2 == NULL)) {
-        int cmd = atoi(arg1);
-        switch (cmd) {
-        case 0:
-            motorsOff();
-            sendAck();
-            break;
-        case 1:
-            motorsOn();
-            sendAck();
-            break;
-        default:
-            sendError();
+    if (arg1 == NULL && arg2 == NULL)
+        sendError();
+
+    const char* args[2] = { arg1, arg2 };
+
+    for (int axis = 0; axis < 2; ++axis) {
+        if (args[axis] != NULL) {
+            const int value = atoi(args[axis]);
+            enableMotor(axis, value);
         }
     }
-    // the following implementaion is a little bit cheated, because i did not
-    // know, how to implement different values for first and second argument.
-    if ((arg1 != NULL) && (arg2 != NULL)) {
-        int value = atoi(arg2);
-        switch (value) {
-        case 0:
-            motorsOff();
-            sendAck();
-            break;
-        case 1:
-            motorsOn();
-            sendAck();
-            break;
-        default:
-            sendError();
-        }
-    }
+    sendAck();
 }
 
 /**

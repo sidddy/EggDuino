@@ -11,10 +11,12 @@ EBBParser ebb(Serial);
 
 void toggleMotors()
 {
-    if (ebb.motorsEnabled) {
-        ebb.motorsOff();
+    if (ebb.motorEnabled) {
+        ebb.enableMotor(0, 0);
+        ebb.enableMotor(1, 0);
     } else {
-        ebb.motorsOn();
+        ebb.enableMotor(0, 5);
+        ebb.enableMotor(1, 5);
     }
 }
 

@@ -19,11 +19,10 @@ public:
     void init();
     void processEvents();
 
-    bool motorsEnabled;
+    bool motorEnabled;
     bool prgButtonState;
 
-    void motorsOff();
-    void motorsOn();
+    void enableMotor(int axis, int value);
     void doTogglePen();
 
 private:
