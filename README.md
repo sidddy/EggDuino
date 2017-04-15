@@ -1,3 +1,8 @@
+WARNING: This is a work in progress fork. Consider it as non working until I put a release tag.
+
+To compile it, either use platformio or the Arduino IDE.
+For the Arduino IDE, AccelStepper and VarSpeedServo libraries need to be installed. 
+
 Eggduino
 ====
 
