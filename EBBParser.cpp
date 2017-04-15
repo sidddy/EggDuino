@@ -115,9 +115,9 @@ void EBBParser::parseEM(const char* arg1, const char* arg2)
         sendError();
         return;
     }
+    sendAck();
 
     const char* args[2] = { arg1, arg2 };
-
     for (int axis = 0; axis < 2; ++axis) {
         if (args[axis] != NULL) {
             // ignore microstepping parameter since the inskape plugin assume 16 by default.
@@ -125,7 +125,6 @@ void EBBParser::parseEM(const char* arg1, const char* arg2)
             enableMotor(axis, state);
         }
     }
-    sendAck();
 }
 
 /**
@@ -144,8 +143,8 @@ Version History: Added in v1.9.5
 */
 void EBBParser::parseND()
 {
-    nodeCount--;
     sendAck();
+    nodeCount--;
 }
 
 /**
@@ -164,8 +163,8 @@ Version History: Added in v1.9.5
 */
 void EBBParser::parseNI()
 {
-    nodeCount++;
     sendAck();
+    nodeCount++;
 }
 
 /**
@@ -202,10 +201,9 @@ void EBBParser::parsePO(const char* arg1, const char* arg2, const char* arg3)
         sendError();
         return;
     }
+    sendAck();
 
     setPinOutput(arg1[0], atoi(arg2), atoi(arg3));
-
-    sendAck();
 }
 
 /**
@@ -452,13 +450,12 @@ void EBBParser::parseSE(const char* arg1, const char* arg2, const char* arg3)
         sendError();
         return;
     }
+    sendAck();
 
-    bool state = atoi(arg1);
-    int power = (arg2 != NULL) ? atoi(arg2) : 512;
+    const bool state = atoi(arg1);
+    const int power = (arg2 != NULL) ? atoi(arg2) : 512;
 
     setEngraverState(state, power);
-
-    sendAck();
 }
 
 /**
@@ -485,9 +482,9 @@ void EBBParser::parseSL(const char* arg)
         sendError();
         return;
     }
+    sendAck();
 
     layer = atoi(arg);
-    sendAck();
 }
 
 /**
@@ -540,12 +537,11 @@ void EBBParser::parseSM(const char* arg1, const char* arg2, const char* arg3)
         sendError();
         return;
     }
-
-    int duration = atoi(arg1);
-    int axis1 = atoi(arg2);
-    int axis2 = (arg3 != NULL) ? atoi(arg3) : 0;
-
     sendAck();
+
+    const int duration = atoi(arg1);
+    const int axis1 = atoi(arg2);
+    const int axis2 = (arg3 != NULL) ? atoi(arg3) : 0;
 
     if (arg3 != NULL && (axis1 == 0) && (axis2 == 0)) {
         delay(duration);
@@ -578,9 +574,9 @@ void EBBParser::parseSN(const char* arg)
         sendError();
         return;
     }
+    sendAck();
 
     nodeCount = atoi(arg);
-    sendAck();
 }
 
 /**
@@ -640,23 +636,15 @@ void EBBParser::parseSP(const char* arg1, const char* arg2, const char* arg3)
     }
 
     int cmd = atoi(arg1);
-    switch (cmd) {
-    case 0: // Lower
-        setPenState(false);
-        break;
-    case 1: // Raise
-        setPenState(true);
-        break;
-    default:
+    if (cmd != 0 && cmd != 1) {
         sendError();
         return;
     }
-
-    if (arg2 != NULL) {
-        int value = atoi(arg2);
-        delay(value);
-    }
     sendAck();
+
+    setPenState(cmd == 0 ? false : true);
+
+    delay((arg2 != NULL) ? atoi(arg2) : 0);
 }
 
 /**
@@ -689,12 +677,11 @@ internally.
 */
 void EBBParser::parseTP(const char* arg)
 {
-    int value = (arg != NULL) ? atoi(arg) : 500;
+    sendAck();
 
     setPenState(!getPenState());
 
-    sendAck();
-    delay(value);
+    delay((arg != NULL) ? atoi(arg) : 0);
 }
 
 /**

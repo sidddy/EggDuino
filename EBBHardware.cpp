@@ -177,9 +177,9 @@ void EBBHardware::setPenState(bool up)
     moveToDestination();
 
     if (up) {
-        penServo.write(penUpPos, servoRateUp, true);
+        penServo.write(penUpPos, servoRateUp);
     } else {
-        penServo.write(penDownPos, servoRateDown, true);
+        penServo.write(penDownPos, servoRateDown);
     }
     penState = up;
 }
