@@ -1,10 +1,15 @@
 
 [![Build Status](https://secure.travis-ci.org/papabricole/EggDuino.png)](http://travis-ci.org/papabricole/EggDuino)
 
-WARNING: This is a work in progress fork. Consider it as non working until I put a release tag.
+Forked from https://github.com/cocktailyogi/EggDuino.
+
+The aim of this fork is to cleanup the codebase to allow hacker to easily add their tweaks.
+ - config.h: the pin configuration for your board.
+ - EBBParser: parser interface for the EBB protocol.
+ - EBBHardware: implement the necessary methods to interpret the events and drive the 2 steppers + servo
 
 To compile it, either use platformio or the Arduino IDE.
-For the Arduino IDE, AccelStepper and VarSpeedServo libraries need to be installed. 
+For the Arduino IDE, the VarSpeedServo librarie need to be installed first. 
 
 Eggduino
 ====
