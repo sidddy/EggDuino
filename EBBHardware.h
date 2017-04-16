@@ -1,6 +1,8 @@
 #pragma once
 
+#include "config.h"
 #include "EBBParser.h"
+#include "Button.h"
 
 #include <AccelStepper.h>
 #include <VarSpeedServo.h>
@@ -10,9 +12,8 @@ public:
     EBBHardware(Stream& stream);
 
     void init();
-    void doTogglePen();
-    void doToggleMotors();
-    void doPrgButtonState();
+
+    virtual void processEvents();
 
 protected:
     virtual void enableMotor(int axis, int value);
@@ -34,7 +35,10 @@ protected:
     virtual void setPinOutput(char port, int pin, int value);
 
     virtual void setEngraverState(int state);
-    virtual void setEngraverPower(int power) {}
+    virtual void setEngraverPower(int power)
+    {
+    }
+
 private:
     AccelStepper rotMotor;
     AccelStepper penMotor;
@@ -53,4 +57,15 @@ private:
     bool motorEnabled;
 
     bool prgButtonState;
+
+// create Buttons
+#ifdef PRG_BUTTON_PIN
+    Button prgButtonToggle;
+#endif
+#ifdef PEN_TOGGLE_BUTTON_PIN
+    Button penToggle;
+#endif
+#ifdef MOTORS_BUTTON_PIN
+    Button motorsToggle;
+#endif
 };

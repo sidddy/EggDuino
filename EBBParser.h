@@ -15,7 +15,7 @@ class EBBParser {
 public:
     EBBParser(Stream& stream);
 
-    void processEvents();
+    virtual void processEvents();
 
 protected:
     virtual void enableMotor(int axis, int value) = 0;

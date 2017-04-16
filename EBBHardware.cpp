@@ -1,8 +1,7 @@
 #include "EBBHardware.h"
+#include "config.h"
 
 #include <EEPROM.h>
-
-#include "config.h"
 
 // devide EBB-Coordinates by this factor to get EGGduino-Steps
 #define rotStepCorrection (16 / X_MICROSTEPPING)
@@ -26,6 +25,15 @@ EBBHardware::EBBHardware(Stream& stream)
     , penStepError(0)
     , motorEnabled(false)
     , prgButtonState(false)
+#ifdef PRG_BUTTON_PIN
+    , prgButtonToggle(PRG_BUTTON_PIN)
+#endif
+#ifdef PEN_TOGGLE_BUTTON_PIN
+    , penToggle(PEN_TOGGLE_BUTTON_PIN)
+#endif
+#ifdef MOTORS_BUTTON_PIN
+    , motorsToggle(MOTORS_BUTTON_PIN)
+#endif
 {
 }
 
@@ -50,29 +58,32 @@ void EBBHardware::init()
     penServo.write(penState ? penUpPos : penDownPos);
 }
 
-void EBBHardware::doTogglePen()
+void EBBHardware::processEvents()
 {
-    if (penState == penUpPos) {
-        setPenState(0);
-    } else {
-        setPenState(1);
+#ifdef PRG_BUTTON_PIN
+    if (prgButtonToggle.wasPressed()) {
+        prgButtonState = true;
     }
-}
+#endif
 
-void EBBHardware::doToggleMotors()
-{
-    if (motorEnabled) {
-        enableMotor(0, 0);
-        enableMotor(1, 0);
-    } else {
-        enableMotor(0, 5);
-        enableMotor(1, 5);
+#ifdef PEN_TOGGLE_BUTTON_PIN
+    if (penToggle.wasPressed()) {
+        setPenState(!getPenState());
     }
-}
+#endif
 
-void EBBHardware::doPrgButtonState()
-{
-    prgButtonState = true;
+#ifdef MOTORS_BUTTON_PIN
+    if (motorsToggle.wasPressed()) {
+        if (motorEnabled) {
+            enableMotor(0, false);
+            enableMotor(1, false);
+        } else {
+            enableMotor(0, true);
+            enableMotor(1, true);
+        }
+    }
+#endif
+    EBBParser::processEvents();
 }
 
 void EBBHardware::enableMotor(int axis, int value)
