@@ -3,10 +3,6 @@
 
 #include <EEPROM.h>
 
-// devide EBB-Coordinates by this factor to get EGGduino-Steps
-#define rotStepCorrection (16 / X_MICROSTEPPING)
-#define penStepCorrection (16 / Y_MICROSTEPPING)
-
 #define EEPROM_PEN_UP_POS 0
 #define EEPROM_PEN_DOWN_POS 2
 #define EEPROM_PEN_UP_RATE 4
@@ -21,8 +17,6 @@ EBBHardware::EBBHardware(Stream& stream)
     , penDownPos(20) // can be overwritten from EBB-Command SC
     , servoRateUp(0)
     , servoRateDown(0)
-    , rotStepError(0)
-    , penStepError(0)
     , motorEnabled(false)
     , prgButtonState(false)
 #ifdef PRG_BUTTON_PIN
@@ -100,45 +94,17 @@ void EBBHardware::stepperMove(int duration, int numPenSteps, int numRotSteps)
 {
     moveToDestination();
 
-    // if coordinatessystems are identical
-    if ((1 == rotStepCorrection) && (1 == penStepCorrection)) {
-        // set Coordinates and Speed
-        rotMotor.move(numRotSteps);
-        rotMotor.setSpeed(abs((float)numRotSteps * (float)1000 / (float)duration));
-        penMotor.move(numPenSteps);
-        penMotor.setSpeed(abs((float)numPenSteps * (float)1000 / (float)duration));
-    } else {
-        // incoming EBB-Steps will be multiplied by 16, then Integer-maths is
-        // done, result will be divided by 16
-        // This make thinks here really complicated, but floating point-math
-        // kills performance and memory, believe me... I tried...
-        long rotSteps = ((long)numRotSteps * 16 / rotStepCorrection) + (long)rotStepError;
-        // correct incoming EBB-Steps to our
-        // microstep-Setting and multiply  by 16 to
-        // avoid floatingpoint...
-        long penSteps = ((long)numPenSteps * 16 / penStepCorrection) + (long)penStepError;
+    // Genuine EggBots are almost all using 16 microstepping.
+    // A standard nema 17 stepper has 200 steps.
+    // With 16 microstepping 200 * 16 = 3200 steps for a full revolution.
+    // If your EggDuino does not have the same number of steps,
+    // you need to adjust the inkscape plugin STEP_SCALE variable inside eggbot_conf.py.
 
-        // Calc Steps to go, which are possible on our machine
-        int rotStepsToGo = (int)(rotSteps / 16);
-        int penStepsToGo = (int)(penSteps / 16);
-
-        // calc Position-Error, if there is one
-        rotStepError = (long)rotSteps - ((long)rotStepsToGo * (long)16);
-        penStepError = (long)penSteps - ((long)penStepsToGo * (long)16);
-
-        // calc Speed in Integer Math
-        long temp_rotSpeed = ((long)rotStepsToGo * (long)1000 / (long)duration);
-        long temp_penSpeed = ((long)penStepsToGo * (long)1000 / (long)duration);
-
-        float rotSpeed = (float)abs(temp_rotSpeed); // type cast
-        float penSpeed = (float)abs(temp_penSpeed);
-
-        // set Coordinates and Speed
-        rotMotor.move(rotStepsToGo); // finally, let us set the target position...
-        rotMotor.setSpeed(rotSpeed); // and the Speed!
-        penMotor.move(penStepsToGo);
-        penMotor.setSpeed(penSpeed);
-    }
+    // set Coordinates and Speed
+    rotMotor.move(numRotSteps);
+    rotMotor.setSpeed(abs((float)numRotSteps * (float)1000 / (float)duration));
+    penMotor.move(numPenSteps);
+    penMotor.setSpeed(abs((float)numPenSteps * (float)1000 / (float)duration));
 }
 
 bool EBBHardware::moveOneStep()

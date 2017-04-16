@@ -5,8 +5,8 @@
 // Supported Servos: I do not know, I use Arduino Servo Lib with TG9e- standard servo.
 // Note: Maximum-Speed in Inkscape is 1000 Steps/s. You could enter more, but then Pythonscript
 // sends nonsense.
-// EBB-Coordinates are coming in for 16th-Microstepmode. The Coordinate-Transforms are done in
-// weired integer-math. Be careful, when you diecide to modify settings.
+// EBB-Coordinates are coming in for 16th-Microstepmode. The number of steps per revolution
+// can be adjusted in eggbot_conf.py from the inkscape plugin.
 
 #include "config.h"
 #include "EBBParser.h"
@@ -55,9 +55,6 @@ private:
 
     short servoRateUp; // eeprom
     short servoRateDown; // eeprom
-
-    long rotStepError;
-    long penStepError;
 
     bool motorEnabled;
 
