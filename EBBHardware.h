@@ -44,29 +44,29 @@ protected:
 private:
     void moveToDestination();
 
-    Stepper rotMotor;
-    Stepper penMotor;
-    VarSpeedServo penServo;
+    Stepper mRotMotor;
+    Stepper mPenMotor;
+    VarSpeedServo mPenServo;
 
-    bool penState;
-    short penUpPos; // eeprom!
-    short penDownPos; // eeprom!
+    bool mPenState;
+    short mPenUpPos; // eeprom!
+    short mPenDownPos; // eeprom!
 
-    short servoRateUp; // eeprom
-    short servoRateDown; // eeprom
+    short mServoRateUp; // eeprom
+    short mServoRateDown; // eeprom
 
-    bool motorEnabled;
+    bool mMotorEnabled;
 
-    bool prgButtonState;
+    bool mPrgButtonState;
 
 // create Buttons
 #ifdef PRG_BUTTON_PIN
-    Button prgButtonToggle;
+    Button mPrgButtonToggle;
 #endif
 #ifdef PEN_TOGGLE_BUTTON_PIN
-    Button penToggle;
+    Button mPenToggle;
 #endif
 #ifdef MOTORS_BUTTON_PIN
-    Button motorsToggle;
+    Button mMotorsToggle;
 #endif
 };

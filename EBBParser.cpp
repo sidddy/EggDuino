@@ -3,10 +3,10 @@
 
 EBBParser::EBBParser(Stream& stream)
     : mStream(stream)
-    , nodeCount(0)
-    , layer(0)
+    , mNodeCount(0)
+    , mLayer(0)
 {
-    readBuffer.reserve(64);
+    mReadBuffer.reserve(64);
 }
 
 void EBBParser::sendAck()
@@ -26,12 +26,12 @@ void EBBParser::parseStream()
 
     const char inChar = mStream.read();
     if (inChar != '\r') {
-        if (readBuffer.length() < 64 && isprint(inChar))
-            readBuffer += inChar;
+        if (mReadBuffer.length() < 64 && isprint(inChar))
+            mReadBuffer += inChar;
         return;
     }
 
-    char* str = readBuffer.begin();
+    char* str = mReadBuffer.begin();
     const char* cmd = strsep(&str, ",");
     const char* arg1 = strsep(&str, ",");
     const char* arg2 = strsep(&str, ",");
@@ -74,7 +74,7 @@ void EBBParser::parseStream()
     } else
         sendError();
 
-    readBuffer = "";
+    mReadBuffer = "";
 }
 
 /**
@@ -144,7 +144,7 @@ Version History: Added in v1.9.5
 void EBBParser::parseND()
 {
     sendAck();
-    nodeCount--;
+    mNodeCount--;
 }
 
 /**
@@ -164,7 +164,7 @@ Version History: Added in v1.9.5
 void EBBParser::parseNI()
 {
     sendAck();
-    nodeCount++;
+    mNodeCount++;
 }
 
 /**
@@ -245,7 +245,7 @@ Version History: Added in v1.9.2
 */
 void EBBParser::parseQL()
 {
-    mStream.print(String(layer) + "\r\n");
+    mStream.print(String(mLayer) + "\r\n");
     sendAck();
 }
 
@@ -275,7 +275,7 @@ Version History: Added in v1.9.2
 */
 void EBBParser::parseQN()
 {
-    mStream.print(String(nodeCount) + "\r\n");
+    mStream.print(String(mNodeCount) + "\r\n");
     sendAck();
 }
 
@@ -484,7 +484,7 @@ void EBBParser::parseSL(const char* arg)
     }
     sendAck();
 
-    layer = atoi(arg);
+    mLayer = atoi(arg);
 }
 
 /**
@@ -576,7 +576,7 @@ void EBBParser::parseSN(const char* arg)
     }
     sendAck();
 
-    nodeCount = atoi(arg);
+    mNodeCount = atoi(arg);
 }
 
 /**

@@ -10,33 +10,33 @@
 
 EBBHardware::EBBHardware(Stream& stream)
     : EBBParser(stream)
-    , rotMotor(X_STEP_PIN, X_DIR_PIN)
-    , penMotor(Y_STEP_PIN, Y_DIR_PIN)
-    , penState(false)
-    , penUpPos(5) // can be overwritten from EBB-Command SC
-    , penDownPos(20) // can be overwritten from EBB-Command SC
-    , servoRateUp(0)
-    , servoRateDown(0)
-    , motorEnabled(false)
-    , prgButtonState(false)
+    , mRotMotor(X_STEP_PIN, X_DIR_PIN)
+    , mPenMotor(Y_STEP_PIN, Y_DIR_PIN)
+    , mPenState(false)
+    , mPenUpPos(5) // can be overwritten from EBB-Command SC
+    , mPenDownPos(20) // can be overwritten from EBB-Command SC
+    , mServoRateUp(0)
+    , mServoRateDown(0)
+    , mMotorEnabled(false)
+    , mPrgButtonState(false)
 #ifdef PRG_BUTTON_PIN
-    , prgButtonToggle(PRG_BUTTON_PIN)
+    , mPrgButtonToggle(PRG_BUTTON_PIN)
 #endif
 #ifdef PEN_TOGGLE_BUTTON_PIN
-    , penToggle(PEN_TOGGLE_BUTTON_PIN)
+    , mPenToggle(PEN_TOGGLE_BUTTON_PIN)
 #endif
 #ifdef MOTORS_BUTTON_PIN
-    , motorsToggle(MOTORS_BUTTON_PIN)
+    , mMotorsToggle(MOTORS_BUTTON_PIN)
 #endif
 {
 }
 
 void EBBHardware::init()
 {
-    EEPROM.get(EEPROM_PEN_UP_POS, penUpPos);
-    EEPROM.get(EEPROM_PEN_DOWN_POS, penDownPos);
-    EEPROM.get(EEPROM_PEN_UP_RATE, servoRateUp);
-    EEPROM.get(EEPROM_PEN_DOWN_RATE, servoRateDown);
+    EEPROM.get(EEPROM_PEN_UP_POS, mPenUpPos);
+    EEPROM.get(EEPROM_PEN_DOWN_POS, mPenDownPos);
+    EEPROM.get(EEPROM_PEN_UP_RATE, mServoRateUp);
+    EEPROM.get(EEPROM_PEN_DOWN_RATE, mServoRateDown);
 
     pinMode(X_ENABLE_PIN, OUTPUT);
     pinMode(Y_ENABLE_PIN, OUTPUT);
@@ -44,27 +44,27 @@ void EBBHardware::init()
 
     enableMotor(0, false);
     enableMotor(1, false);
-    penServo.attach(SERVO_PIN);
-    penServo.write(penState ? penUpPos : penDownPos);
+    mPenServo.attach(SERVO_PIN);
+    mPenServo.write(mPenState ? mPenUpPos : mPenDownPos);
 }
 
 void EBBHardware::processEvents()
 {
 #ifdef PRG_BUTTON_PIN
-    if (prgButtonToggle.wasPressed()) {
-        prgButtonState = true;
+    if (mPrgButtonToggle.wasPressed()) {
+        mPrgButtonState = true;
     }
 #endif
 
 #ifdef PEN_TOGGLE_BUTTON_PIN
-    if (penToggle.wasPressed()) {
+    if (mPenToggle.wasPressed()) {
         setPenState(!getPenState());
     }
 #endif
 
 #ifdef MOTORS_BUTTON_PIN
-    if (motorsToggle.wasPressed()) {
-        if (motorEnabled) {
+    if (mMotorsToggle.wasPressed()) {
+        if (mMotorEnabled) {
             enableMotor(0, false);
             enableMotor(1, false);
         } else {
@@ -75,8 +75,8 @@ void EBBHardware::processEvents()
 #endif
     parseStream();
 
-    penMotor.update();
-    rotMotor.update();
+    mPenMotor.update();
+    mRotMotor.update();
 }
 
 void EBBHardware::enableMotor(int axis, bool state)
@@ -85,7 +85,7 @@ void EBBHardware::enableMotor(int axis, bool state)
 
     digitalWrite(pin, state ? LOW : HIGH);
 
-    motorEnabled = state;
+    mMotorEnabled = state;
 }
 
 void EBBHardware::stepperMove(int duration, int numPenSteps, int numRotSteps)
@@ -99,15 +99,15 @@ void EBBHardware::stepperMove(int duration, int numPenSteps, int numRotSteps)
     // you need to adjust the inkscape plugin STEP_SCALE variable inside eggbot_conf.py.
 
     // set Coordinates and Speed
-    rotMotor.setTarget(numRotSteps, duration);
-    penMotor.setTarget(numPenSteps, duration);
+    mRotMotor.setTarget(numRotSteps, duration);
+    mPenMotor.setTarget(numPenSteps, duration);
 }
 
 void EBBHardware::moveToDestination()
 {
-    while (penMotor.remainingSteps() || rotMotor.remainingSteps()) {
-        penMotor.update(); // Moving.... moving... moving....
-        rotMotor.update();
+    while (mPenMotor.remainingSteps() || mRotMotor.remainingSteps()) {
+        mPenMotor.update(); // Moving.... moving... moving....
+        mRotMotor.update();
     }
 }
 
@@ -130,47 +130,47 @@ void EBBHardware::setPenState(bool up)
     moveToDestination();
 
     if (up) {
-        penServo.write(penUpPos, servoRateUp);
+        mPenServo.write(mPenUpPos, mServoRateUp);
     } else {
-        penServo.write(penDownPos, servoRateDown);
+        mPenServo.write(mPenDownPos, mServoRateDown);
     }
-    penState = up;
+    mPenState = up;
 }
 
 bool EBBHardware::getPenState()
 {
-    return penState;
+    return mPenState;
 }
 
 void EBBHardware::setPenUpPos(int percent)
 {
     // transformation from EBB to PWM-Servo
-    penUpPos = (int)((float)(percent - 6000) / (float)133.3);
-    EEPROM.put(EEPROM_PEN_UP_POS, penUpPos);
+    mPenUpPos = (int)((float)(percent - 6000) / (float)133.3);
+    EEPROM.put(EEPROM_PEN_UP_POS, mPenUpPos);
 }
 
 void EBBHardware::setPenDownPos(int percent)
 {
     // transformation from EBB to PWM-Servo
-    penDownPos = (int)((float)(percent - 6000) / (float)133.3);
-    EEPROM.put(EEPROM_PEN_DOWN_POS, penDownPos);
+    mPenDownPos = (int)((float)(percent - 6000) / (float)133.3);
+    EEPROM.put(EEPROM_PEN_DOWN_POS, mPenDownPos);
 }
 
 void EBBHardware::setServoRateUp(int percentPerSecond)
 {
-    servoRateUp = percentPerSecond;
-    EEPROM.put(EEPROM_PEN_UP_RATE, servoRateUp);
+    mServoRateUp = percentPerSecond;
+    EEPROM.put(EEPROM_PEN_UP_RATE, mServoRateUp);
 }
 
 void EBBHardware::setServoRateDown(int percentPerSecond)
 {
-    servoRateDown = percentPerSecond;
-    EEPROM.put(EEPROM_PEN_DOWN_RATE, servoRateDown);
+    mServoRateDown = percentPerSecond;
+    EEPROM.put(EEPROM_PEN_DOWN_RATE, mServoRateDown);
 }
 
 bool EBBHardware::getPrgButtonState()
 {
-    bool state = prgButtonState;
-    prgButtonState = false;
+    bool state = mPrgButtonState;
+    mPrgButtonState = false;
     return state;
 }

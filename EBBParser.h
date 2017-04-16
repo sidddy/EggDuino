@@ -50,7 +50,7 @@ private:
 
     Stream& mStream;
 
-    String readBuffer;
-    unsigned long nodeCount;
-    int layer;
+    String mReadBuffer;
+    unsigned long mNodeCount;
+    int mLayer;
 };
