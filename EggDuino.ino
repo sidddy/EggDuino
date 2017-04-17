@@ -1,8 +1,8 @@
 #include "config.h"
-#include "EBBParser.h"
+#include "EBBHardware.h"
 #include "Button.h"
 
-EBBParser ebb(Serial);
+EBBHardware ebb(Serial);
 
 // Buttons
 #define PRG_BUTTON_PIN A2 // PRG button ("Abort")
@@ -11,18 +11,12 @@ EBBParser ebb(Serial);
 
 void toggleMotors()
 {
-    if (ebb.motorEnabled) {
-        ebb.enableMotor(0, 0);
-        ebb.enableMotor(1, 0);
-    } else {
-        ebb.enableMotor(0, 5);
-        ebb.enableMotor(1, 5);
-    }
+    ebb.doToggleMotors();
 }
 
 void setprgButtonState()
 {
-    ebb.prgButtonState = true;
+    ebb.doPrgButtonState();
 }
 
 void togglePen()

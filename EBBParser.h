@@ -5,26 +5,37 @@
 // no homing sequence, switch-on position of pen will be taken as reference point.
 // No collision-detection!!
 // Supported Servos: I do not know, I use Arduino Servo Lib with TG9e- standard servo.
-// Note: Maximum-Speed in Inkscape is 1000 Steps/s. You could enter more, but then Pythonscript sends nonsense.
-// EBB-Coordinates are coming in for 16th-Microstepmode. The Coordinate-Transforms are done in weired integer-math. Be careful, when you diecide to modify settings.
+// Note: Maximum-Speed in Inkscape is 1000 Steps/s. You could enter more, but then Pythonscript
+// sends nonsense.
+// EBB-Coordinates are coming in for 16th-Microstepmode. The Coordinate-Transforms are done in
+// weired integer-math. Be careful, when you diecide to modify settings.
 #include <Stream.h>
-
-#include <AccelStepper.h>
-#include <VarSpeedServo.h>
 
 class EBBParser {
 public:
     EBBParser(Stream& stream);
 
-    void init();
     void processEvents();
 
-    bool motorEnabled;
-    bool prgButtonState;
+protected:
+    virtual void enableMotor(int axis, int value) = 0;
+    virtual void stepperMove(int duration, int penStepsEBB, int rotStepsEBB) = 0;
+    virtual void moveOneStep() = 0;
+    virtual void moveToDestination() = 0;
 
-    void enableMotor(int axis, int value);
-    void doTogglePen();
+    virtual void setPenState(int upDown) = 0;
+    virtual int getPenState() = 0;
+    virtual void setPenUpPos(int pos) = 0;
+    virtual void setPenDownPos(int pos) = 0;
 
+    virtual void setServoRateUp(int rate) = 0;
+    virtual void setServoRateDown(int rate) = 0;
+
+    virtual int getPrgButtonState() = 0;
+    virtual void setPinOutput(char port, int pin, int value) = 0;
+
+    virtual void setEngraverState(int state) = 0;
+    virtual void setEngraverPower(int power) = 0;
 private:
     void parseStream();
     void sendAck();
@@ -39,7 +50,7 @@ private:
     void parseQN();
     void parseQP();
     void parseSC(const char* arg1, const char* arg2);
-    void parseSE(const char* arg);
+    void parseSE(const char* arg1, const char* arg2, const char* arg3);
     void parseSL(const char* arg);
     void parseSM(const char* arg1, const char* arg2, const char* arg3);
     void parseSN(const char* arg);
@@ -47,27 +58,8 @@ private:
     void parseTP(const char* arg);
     void parseV();
 
-    void setPenUp();
-    void setPenDown();
-    void prepareMove(int duration, int penStepsEBB, int rotStepsEBB);
-    void moveToDestination();
-    void moveOneStep();
-
     Stream& mStream;
 
-    AccelStepper rotMotor;
-    AccelStepper penMotor;
-    VarSpeedServo penServo;
-
-    int penMin;
-    int penMax;
-    short penUpPos; //eeprom
-    short penDownPos; //eeprom
-    short servoRateUp; //eeprom
-    short servoRateDown; //eeprom
-    long rotStepError;
-    long penStepError;
-    int penState;
     String readBuffer;
     unsigned int nodeCount;
     unsigned int layer;

@@ -1,58 +1,12 @@
 #include "EBBParser.h"
-#include "config.h"
-
-#include <EEPROM.h>
-
-// devide EBB-Coordinates by this factor to get EGGduino-Steps
-#define rotStepCorrection (16 / X_MICROSTEPPING)
-#define penStepCorrection (16 / Y_MICROSTEPPING)
-
-#define EEPROM_PEN_UP_POS    0
-#define EEPROM_PEN_DOWN_POS  2
-#define EEPROM_PEN_UP_RATE   4
-#define EEPROM_PEN_DOWN_RATE 6
+#include <Arduino.h>
 
 EBBParser::EBBParser(Stream& stream)
-    : motorEnabled(false)
-    , prgButtonState(false)
-    , mStream(stream)
-    , rotMotor(1, X_STEP_PIN, X_DIR_PIN)
-    , penMotor(1, Y_STEP_PIN, Y_DIR_PIN)
-    , penMin(0)
-    , penMax(0)
-    , penUpPos(5) // can be overwritten from EBB-Command SC
-    , penDownPos(20) // can be overwritten from EBB-Command SC
-    , servoRateUp(0)
-    , servoRateDown(0)
-    , rotStepError(0)
-    , penStepError(0)
-    , penState(penUpPos)
+    : mStream(stream)
     , nodeCount(0)
     , layer(0)
 {
     readBuffer.reserve(64);
-}
-
-void EBBParser::init()
-{
-    EEPROM.get(EEPROM_PEN_UP_POS, penUpPos);
-    EEPROM.get(EEPROM_PEN_DOWN_POS, penDownPos);
-    EEPROM.get(EEPROM_PEN_UP_RATE, servoRateUp);
-    EEPROM.get(EEPROM_PEN_DOWN_RATE, servoRateDown);
-    penState = penUpPos;
-
-    pinMode(X_ENABLE_PIN, OUTPUT);
-    pinMode(Y_ENABLE_PIN, OUTPUT);
-    pinMode(ENGRAVER_PIN, OUTPUT);
-
-    rotMotor.setMaxSpeed(2000.0);
-    rotMotor.setAcceleration(10000.0);
-    penMotor.setMaxSpeed(2000.0);
-    penMotor.setAcceleration(10000.0);
-    enableMotor(0, 0);
-    enableMotor(1, 0);
-    penServo.attach(SERVO_PIN);
-    penServo.write(penState);
 }
 
 void EBBParser::processEvents()
@@ -69,104 +23,6 @@ void EBBParser::sendAck()
 void EBBParser::sendError()
 {
     mStream.print("!8 Err: Unknown command\r\n");
-}
-
-void EBBParser::enableMotor(int axis, int value)
-{
-    const uint8_t pin = (axis == 0) ? X_ENABLE_PIN : Y_ENABLE_PIN;
-    switch(value)
-    {
-        case 0:
-            digitalWrite(pin, HIGH);
-        break;
-        case 1:
-        case 2:
-        case 3:
-        case 4:
-            digitalWrite(pin, LOW);
-        break;
-    }
-    motorEnabled = value;
-}
-
-void EBBParser::prepareMove(int duration, int axis1, int axis2)
-{
-    // if coordinatessystems are identical
-    if ((1 == rotStepCorrection) && (1 == penStepCorrection)) {
-        // set Coordinates and Speed
-        rotMotor.move(axis2);
-        rotMotor.setSpeed(abs((float)axis2 * (float)1000 / (float)duration));
-        penMotor.move(axis1);
-        penMotor.setSpeed(abs((float)axis1 * (float)1000 / (float)duration));
-    } else {
-        // incoming EBB-Steps will be multiplied by 16, then Integer-maths is
-        // done, result will be divided by 16
-        // This make thinks here really complicated, but floating point-math
-        // kills performance and memory, believe me... I tried...
-        long rotSteps = ((long)axis2 * 16 / rotStepCorrection) + (long)rotStepError;
-        // correct incoming EBB-Steps to our
-        // microstep-Setting and multiply  by 16 to
-        // avoid floatingpoint...
-        long penSteps = ((long)axis1 * 16 / penStepCorrection) + (long)penStepError;
-
-        // Calc Steps to go, which are possible on our machine
-        int rotStepsToGo = (int)(rotSteps / 16);
-        int penStepsToGo = (int)(penSteps / 16);
-
-        // calc Position-Error, if there is one
-        rotStepError = (long)rotSteps - ((long)rotStepsToGo * (long)16);
-        penStepError = (long)penSteps - ((long)penStepsToGo * (long)16);
-
-        // calc Speed in Integer Math
-        long temp_rotSpeed = ((long)rotStepsToGo * (long)1000 / (long)duration);
-        long temp_penSpeed = ((long)penStepsToGo * (long)1000 / (long)duration);
-
-        float rotSpeed = (float)abs(temp_rotSpeed); // type cast
-        float penSpeed = (float)abs(temp_penSpeed);
-
-        // set Coordinates and Speed
-        rotMotor.move(rotStepsToGo); // finally, let us set the target position...
-        rotMotor.setSpeed(rotSpeed); // and the Speed!
-        penMotor.move(penStepsToGo);
-        penMotor.setSpeed(penSpeed);
-    }
-}
-
-void EBBParser::moveToDestination()
-{
-    while (penMotor.distanceToGo() || rotMotor.distanceToGo()) {
-        penMotor.runSpeedToPosition(); // Moving.... moving... moving....
-        rotMotor.runSpeedToPosition();
-    }
-}
-
-void EBBParser::moveOneStep()
-{
-    if (penMotor.distanceToGo() || rotMotor.distanceToGo()) {
-        penMotor.runSpeedToPosition(); // Moving.... moving... moving....
-        rotMotor.runSpeedToPosition();
-    }
-}
-
-void EBBParser::setPenUp()
-{
-    penServo.write(penUpPos, servoRateUp, true);
-    penState = penUpPos;
-}
-
-void EBBParser::setPenDown()
-{
-    penServo.write(penDownPos, servoRateDown, true);
-    penState = penDownPos;
-}
-
-void EBBParser::doTogglePen()
-{
-    if (penState == penUpPos) {
-        setPenDown();
-    } else {
-        setPenUp();
-    }
 }
 
 void EBBParser::parseStream()
@@ -186,7 +42,6 @@ void EBBParser::parseStream()
     const char* arg1 = strsep(&str, ",");
     const char* arg2 = strsep(&str, ",");
     const char* arg3 = strsep(&str, ",");
-
 
     if (strcmp(cmd, "EM") == 0) {
         parseEM(arg1, arg2);
@@ -209,7 +64,7 @@ void EBBParser::parseStream()
     } else if (strcmp(cmd, "SC") == 0) {
         parseSC(arg1, arg2);
     } else if (strcmp(cmd, "SE") == 0) {
-        parseSE(arg1);
+        parseSE(arg1, arg2, arg3);
     } else if (strcmp(cmd, "SL") == 0) {
         parseSL(arg1);
     } else if (strcmp(cmd, "SM") == 0) {
@@ -262,8 +117,10 @@ Note that this version of the command is only for EBB hardware v1.1.
 */
 void EBBParser::parseEM(const char* arg1, const char* arg2)
 {
-    if (arg1 == NULL && arg2 == NULL)
+    if (arg1 == NULL) {
         sendError();
+        return;
+    }
 
     const char* args[2] = { arg1, arg2 };
 
@@ -316,7 +173,6 @@ void EBBParser::parseNI()
     sendAck();
 }
 
-
 /**
 "PO" — Pin Output
 
@@ -351,12 +207,9 @@ void EBBParser::parsePO(const char* arg1, const char* arg2, const char* arg3)
         sendError();
         return;
     }
-    // PO,B,3,0 = disable engraver
-    // PO,B,3,1 = enable engraver
-    if (arg1[0] == 'B' && arg2[0] == '3') {
-        int val = atoi(arg3);
-        digitalWrite(ENGRAVER_PIN, val);
-    }
+
+    setPinOutput(arg1[0], atoi(arg2), atoi(arg3));
+
     sendAck();
 }
 
@@ -378,9 +231,8 @@ Version History: Added in v1.9.2
 */
 void EBBParser::parseQB()
 {
-    mStream.print(String(prgButtonState) + "\r\n");
+    mStream.print(String(getPrgButtonState()) + "\r\n");
     sendAck();
-    prgButtonState = false;
 }
 
 /**
@@ -453,7 +305,7 @@ Version History: Added in v1.9
 */
 void EBBParser::parseQP()
 {
-    const char state = (penState == penUpPos) ? '0' : '1';
+    const char state = (getPenState() == 0) ? '0' : '1';
     mStream.print(String(state) + "\r\n");
     sendAck();
 }
@@ -535,42 +387,35 @@ control output.
 */
 void EBBParser::parseSC(const char* arg1, const char* arg2)
 {
-    if ((arg1 != NULL) && (arg2 != NULL)) {
-        int cmd = atoi(arg1);
-        int value = atoi(arg2);
-        switch (cmd) {
-        case 4:
-            // transformation from EBB to PWM-Servo
-            penUpPos = (int)((float)(value - 6000) / (float)133.3);
-            EEPROM.put(EEPROM_PEN_UP_POS, penUpPos);
-            sendAck();
-            break;
-        case 5:
-            // transformation from EBB to PWM-Servo
-            penDownPos = (int)((float)(value - 6000) / (float)133.3);
-            EEPROM.put(EEPROM_PEN_DOWN_POS, penDownPos);
-            sendAck();
-            break;
-        case 6: // rotMin=value;    ignored
-            sendAck();
-            break;
-        case 7: // rotMax=value;    ignored
-            sendAck();
-            break;
-        case 11:
-            servoRateUp = value / 5;
-            EEPROM.put(EEPROM_PEN_UP_RATE, servoRateUp);
-            sendAck();
-            break;
-        case 12:
-            servoRateDown = value / 5;
-            EEPROM.put(EEPROM_PEN_DOWN_RATE, servoRateDown);
-            sendAck();
-            break;
-        default:
-            sendError();
-        }
+    if (arg1 == NULL || arg2 == NULL) {
+        sendError();
+        return;
     }
+
+    int cmd = atoi(arg1);
+    int value = atoi(arg2);
+    switch (cmd) {
+    case 4:
+        setPenUpPos(value);
+        break;
+    case 5:
+        setPenDownPos(value);
+        break;
+    case 6: // rotMin=value;    ignored
+        break;
+    case 7: // rotMax=value;    ignored
+        break;
+    case 11:
+        setServoRateUp(value / 5);
+        break;
+    case 12:
+        setServoRateDown(value / 5);
+        break;
+    default:
+        sendError();
+        return;
+    }
+    sendAck();
 }
 
 /**
@@ -607,11 +452,19 @@ Example: SE,0\r Turns off the engraver output
 Example: SE,0,0,1\r Adds a command to the motion queue, that (when executed)
 turns off the engraver output.
 */
-void EBBParser::parseSE(const char* arg)
+void EBBParser::parseSE(const char* arg1, const char* arg2, const char* arg3)
 {
-    if (arg != NULL) {
-        int val = atoi(arg);
-        digitalWrite(ENGRAVER_PIN, val);
+    if (arg1 == NULL) {
+        sendError();
+        return;
+    }
+
+    int state = atoi(arg1);
+    setEngraverState(state);
+
+    if (arg2 != NULL) {
+        int power = atoi(arg2);
+        setEngraverPower(power);
     }
     sendAck();
 }
@@ -636,8 +489,10 @@ Version History: Added in v1.9.2
 */
 void EBBParser::parseSL(const char* arg)
 {
-    if (arg == NULL)
+    if (arg == NULL) {
         sendError();
+        return;
+    }
 
     layer = atoi(arg);
     sendAck();
@@ -691,23 +546,23 @@ void EBBParser::parseSM(const char* arg1, const char* arg2, const char* arg3)
 {
     moveToDestination();
 
-    if (!arg1 || !arg2 || !arg3) {
+    if (arg1 == NULL || arg2 == NULL) {
         sendError();
         return;
     }
 
     int duration = atoi(arg1);
     int axis1 = atoi(arg2);
-    int axis2 = atoi(arg3);
+    int axis2 = (arg3 != NULL) ? atoi(arg3) : 0;
 
     sendAck();
 
-    if ((axis1 == 0) && (axis2 == 0)) {
+    if (arg3 != NULL && (axis1 == 0) && (axis2 == 0)) {
         delay(duration);
         return;
     }
 
-    prepareMove(duration, axis1, axis2);
+    stepperMove(duration, axis1, axis2);
 }
 
 /**
@@ -729,8 +584,10 @@ Version History: Added in v1.9.5
 */
 void EBBParser::parseSN(const char* arg)
 {
-    if (arg == NULL)
+    if (arg == NULL) {
         sendError();
+        return;
+    }
 
     nodeCount = atoi(arg);
     sendAck();
@@ -787,27 +644,31 @@ Example: SP,1<CR> Move pen-lift servo motor to servo_min position.
 */
 void EBBParser::parseSP(const char* arg1, const char* arg2, const char* arg3)
 {
+    if (arg1 == NULL) {
+        sendError();
+        return;
+    }
+
     moveToDestination();
 
-    if (arg1 != NULL) {
-        int cmd = atoi(arg1);
-        switch (cmd) {
-        case 0: // Lower
-            sendAck();
-            setPenDown();
-            break;
-        case 1: // Raise
-            sendAck();
-            setPenUp();
-            break;
-        default:
-            sendError();
-        }
+    int cmd = atoi(arg1);
+    switch (cmd) {
+    case 0: // Lower
+        setPenState(0);
+        break;
+    case 1: // Raise
+        setPenState(1);
+        break;
+    default:
+        sendError();
+        return;
     }
+
     if (arg2 != NULL) {
         int value = atoi(arg2);
         delay(value);
     }
+    sendAck();
 }
 
 /**
@@ -844,7 +705,11 @@ void EBBParser::parseTP(const char* arg)
 
     int value = (arg != NULL) ? atoi(arg) : 500;
 
-    doTogglePen();
+    if (getPenState() == 1) {
+        setPenState(0);
+    } else {
+        setPenState(1);
+    }
     sendAck();
     delay(value);
 }
