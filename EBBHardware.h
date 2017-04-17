@@ -11,8 +11,8 @@
 #include "config.h"
 #include "EBBParser.h"
 #include "Button.h"
+#include "Stepper.h"
 
-#include <AccelStepper.h>
 #include <VarSpeedServo.h>
 
 class EBBHardware : public EBBParser {
@@ -42,11 +42,10 @@ protected:
     virtual void setEngraverState(bool state, int power);
 
 private:
-    bool moveOneStep();
     void moveToDestination();
 
-    AccelStepper rotMotor;
-    AccelStepper penMotor;
+    Stepper rotMotor;
+    Stepper penMotor;
     VarSpeedServo penServo;
 
     bool penState;

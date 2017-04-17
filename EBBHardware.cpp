@@ -10,8 +10,8 @@
 
 EBBHardware::EBBHardware(Stream& stream)
     : EBBParser(stream)
-    , rotMotor(1, X_STEP_PIN, X_DIR_PIN)
-    , penMotor(1, Y_STEP_PIN, Y_DIR_PIN)
+    , rotMotor(X_STEP_PIN, X_DIR_PIN)
+    , penMotor(Y_STEP_PIN, Y_DIR_PIN)
     , penState(false)
     , penUpPos(5) // can be overwritten from EBB-Command SC
     , penDownPos(20) // can be overwritten from EBB-Command SC
@@ -42,10 +42,6 @@ void EBBHardware::init()
     pinMode(Y_ENABLE_PIN, OUTPUT);
     pinMode(ENGRAVER_PIN, OUTPUT);
 
-    rotMotor.setMaxSpeed(2000.0);
-    rotMotor.setAcceleration(10000.0);
-    penMotor.setMaxSpeed(2000.0);
-    penMotor.setAcceleration(10000.0);
     enableMotor(0, false);
     enableMotor(1, false);
     penServo.attach(SERVO_PIN);
@@ -78,7 +74,9 @@ void EBBHardware::processEvents()
     }
 #endif
     parseStream();
-    moveOneStep();
+
+    penMotor.update();
+    rotMotor.update();
 }
 
 void EBBHardware::enableMotor(int axis, bool state)
@@ -101,26 +99,15 @@ void EBBHardware::stepperMove(int duration, int numPenSteps, int numRotSteps)
     // you need to adjust the inkscape plugin STEP_SCALE variable inside eggbot_conf.py.
 
     // set Coordinates and Speed
-    rotMotor.move(numRotSteps);
-    rotMotor.setSpeed(abs((float)numRotSteps * (float)1000 / (float)duration));
-    penMotor.move(numPenSteps);
-    penMotor.setSpeed(abs((float)numPenSteps * (float)1000 / (float)duration));
-}
-
-bool EBBHardware::moveOneStep()
-{
-    if (penMotor.distanceToGo() || rotMotor.distanceToGo()) {
-        penMotor.runSpeedToPosition(); // Moving.... moving... moving....
-        rotMotor.runSpeedToPosition();
-    }
-    return true;
+    rotMotor.setTarget(numRotSteps, duration);
+    penMotor.setTarget(numPenSteps, duration);
 }
 
 void EBBHardware::moveToDestination()
 {
-    while (penMotor.distanceToGo() || rotMotor.distanceToGo()) {
-        penMotor.runSpeedToPosition(); // Moving.... moving... moving....
-        rotMotor.runSpeedToPosition();
+    while (penMotor.remainingSteps() || rotMotor.remainingSteps()) {
+        penMotor.update(); // Moving.... moving... moving....
+        rotMotor.update();
     }
 }
 
