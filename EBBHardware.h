@@ -1,5 +1,13 @@
 #pragma once
 
+// no homing sequence, switch-on position of pen will be taken as reference point.
+// No collision-detection!!
+// Supported Servos: I do not know, I use Arduino Servo Lib with TG9e- standard servo.
+// Note: Maximum-Speed in Inkscape is 1000 Steps/s. You could enter more, but then Pythonscript
+// sends nonsense.
+// EBB-Coordinates are coming in for 16th-Microstepmode. The Coordinate-Transforms are done in
+// weired integer-math. Be careful, when you diecide to modify settings.
+
 #include "config.h"
 #include "EBBParser.h"
 #include "Button.h"
@@ -17,15 +25,15 @@ public:
 
 protected:
     virtual void enableMotor(int axis, bool state);
-    virtual void stepperMove(int duration, int penStepsEBB, int rotStepsEBB);
+    virtual void stepperMove(int duration, int numPenSteps, int numRotSteps);
 
     virtual void setPenState(bool up);
     virtual bool getPenState();
-    virtual void setPenUpPos(int pos);
-    virtual void setPenDownPos(int pos);
+    virtual void setPenUpPos(int percent);
+    virtual void setPenDownPos(int percent);
 
-    virtual void setServoRateUp(int rate);
-    virtual void setServoRateDown(int rate);
+    virtual void setServoRateUp(int percentPerSecond);
+    virtual void setServoRateDown(int percentPerSecond);
 
     virtual bool getPrgButtonState();
 
