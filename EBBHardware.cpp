@@ -41,11 +41,11 @@ void EBBHardware::init()
     pinMode(X_ENABLE_PIN, OUTPUT);
     pinMode(Y_ENABLE_PIN, OUTPUT);
     pinMode(ENGRAVER_PIN, OUTPUT);
+    mPenServo.attach(SERVO_PIN);
 
     enableMotor(0, false);
     enableMotor(1, false);
-    mPenServo.attach(SERVO_PIN);
-    mPenServo.writeMicroseconds(mPenState ? mPenUpPos : mPenDownPos);
+    setPenState(mPenState, 0);
 }
 
 void EBBHardware::processEvents()
@@ -151,14 +151,14 @@ bool EBBHardware::getPenState()
 void EBBHardware::setPenUpPos(int percent)
 {
     // transformation from percent to PWM-Servo
-    mPenUpPos = MIN_PULSE_WIDTH  + (MAX_PULSE_WIDTH - MIN_PULSE_WIDTH) / 100.f * percent;
+    mPenUpPos = MIN_PULSE_WIDTH + (MAX_PULSE_WIDTH - MIN_PULSE_WIDTH) / 100.f * percent;
     EEPROM.put(EEPROM_PEN_UP_POS, mPenUpPos);
 }
 
 void EBBHardware::setPenDownPos(int percent)
 {
     // transformation from percent to PWM-Servo
-    mPenDownPos = MIN_PULSE_WIDTH  + (MAX_PULSE_WIDTH - MIN_PULSE_WIDTH) / 100.f * percent;
+    mPenDownPos = MIN_PULSE_WIDTH + (MAX_PULSE_WIDTH - MIN_PULSE_WIDTH) / 100.f * percent;
     EEPROM.put(EEPROM_PEN_DOWN_POS, mPenDownPos);
 }
 
