@@ -388,10 +388,10 @@ void EBBParser::parseSC(const char* arg1, const char* arg2)
     int value = atoi(arg2);
     switch (cmd) {
     case 4:
-        setPenUpPos(value);
+        setPenUpPos(value / 240 - 25);
         break;
     case 5:
-        setPenDownPos(value);
+        setPenDownPos(value / 240 - 25);
         break;
     case 6: // rotMin=value;    ignored
         break;

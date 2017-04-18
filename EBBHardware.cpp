@@ -13,8 +13,8 @@ EBBHardware::EBBHardware(Stream& stream)
     , mRotMotor(X_STEP_PIN, X_DIR_PIN)
     , mPenMotor(Y_STEP_PIN, Y_DIR_PIN)
     , mPenState(false)
-    , mPenUpPos(5) // can be overwritten from EBB-Command SC
-    , mPenDownPos(20) // can be overwritten from EBB-Command SC
+    , mPenUpPos(DEFAULT_PULSE_WIDTH - 200) // can be overwritten from EBB-Command SC
+    , mPenDownPos(DEFAULT_PULSE_WIDTH) // can be overwritten from EBB-Command SC
     , mServoRateUp(0)
     , mServoRateDown(0)
     , mMotorEnabled(false)
@@ -45,7 +45,7 @@ void EBBHardware::init()
     enableMotor(0, false);
     enableMotor(1, false);
     mPenServo.attach(SERVO_PIN);
-    mPenServo.write(mPenState ? mPenUpPos : mPenDownPos);
+    mPenServo.writeMicroseconds(mPenState ? mPenUpPos : mPenDownPos);
 }
 
 void EBBHardware::processEvents()
@@ -144,15 +144,15 @@ bool EBBHardware::getPenState()
 
 void EBBHardware::setPenUpPos(int percent)
 {
-    // transformation from EBB to PWM-Servo
-    mPenUpPos = (int)((float)(percent - 6000) / (float)133.3);
+    // transformation from percent to PWM-Servo
+    mPenUpPos = MIN_PULSE_WIDTH  + (MAX_PULSE_WIDTH - MIN_PULSE_WIDTH) / 100.f * percent;
     EEPROM.put(EEPROM_PEN_UP_POS, mPenUpPos);
 }
 
 void EBBHardware::setPenDownPos(int percent)
 {
-    // transformation from EBB to PWM-Servo
-    mPenDownPos = (int)((float)(percent - 6000) / (float)133.3);
+    // transformation from percent to PWM-Servo
+    mPenDownPos = MIN_PULSE_WIDTH  + (MAX_PULSE_WIDTH - MIN_PULSE_WIDTH) / 100.f * percent;
     EEPROM.put(EEPROM_PEN_DOWN_POS, mPenDownPos);
 }
 
