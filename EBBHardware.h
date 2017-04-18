@@ -27,7 +27,7 @@ protected:
     virtual void enableMotor(int axis, bool state);
     virtual void stepperMove(int duration, int numPenSteps, int numRotSteps);
 
-    virtual void setPenState(bool up);
+    virtual void setPenState(bool up, short delayMs);
     virtual bool getPenState();
     virtual void setPenUpPos(int percent);
     virtual void setPenDownPos(int percent);

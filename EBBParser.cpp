@@ -1,5 +1,4 @@
 #include "EBBParser.h"
-#include <Arduino.h>
 
 EBBParser::EBBParser(Stream& stream)
     : mStream(stream)
@@ -543,11 +542,6 @@ void EBBParser::parseSM(const char* arg1, const char* arg2, const char* arg3)
     const int axis1 = atoi(arg2);
     const int axis2 = (arg3 != NULL) ? atoi(arg3) : 0;
 
-    if (arg3 != NULL && (axis1 == 0) && (axis2 == 0)) {
-        delay(duration);
-        return;
-    }
-
     stepperMove(duration, axis1, axis2);
 }
 
@@ -642,9 +636,9 @@ void EBBParser::parseSP(const char* arg1, const char* arg2, const char* arg3)
     }
     sendAck();
 
-    setPenState(cmd == 0 ? false : true);
+    const short delayMs = (arg2 != NULL) ? atoi(arg2) : 0;
 
-    delay((arg2 != NULL) ? atoi(arg2) : 0);
+    setPenState(cmd == 0 ? false : true, delayMs);
 }
 
 /**
@@ -679,9 +673,9 @@ void EBBParser::parseTP(const char* arg)
 {
     sendAck();
 
-    setPenState(!getPenState());
+    const short delayMs = (arg != NULL) ? atoi(arg) : 0;
 
-    delay((arg != NULL) ? atoi(arg) : 0);
+    setPenState(!getPenState(), delayMs);
 }
 
 /**

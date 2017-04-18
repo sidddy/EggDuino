@@ -58,7 +58,7 @@ void EBBHardware::processEvents()
 
 #ifdef PEN_TOGGLE_BUTTON_PIN
     if (mPenToggle.wasPressed()) {
-        setPenState(!getPenState());
+        setPenState(!getPenState(), 0);
     }
 #endif
 
@@ -99,8 +99,12 @@ void EBBHardware::stepperMove(int duration, int numPenSteps, int numRotSteps)
     // you need to adjust the inkscape plugin STEP_SCALE variable inside eggbot_conf.py.
 
     // set Coordinates and Speed
-    mRotMotor.setTarget(numRotSteps, duration);
-    mPenMotor.setTarget(numPenSteps, duration);
+    if (numRotSteps == 0 && numPenSteps == 0) {
+        delay(duration);
+    } else {
+        mRotMotor.setTarget(numRotSteps, duration);
+        mPenMotor.setTarget(numPenSteps, duration);
+    }
 }
 
 void EBBHardware::moveToDestination()
@@ -125,7 +129,7 @@ void EBBHardware::setEngraverState(bool state, int power)
     digitalWrite(ENGRAVER_PIN, state);
 }
 
-void EBBHardware::setPenState(bool up)
+void EBBHardware::setPenState(bool up, short delayMs)
 {
     moveToDestination();
 
@@ -135,6 +139,8 @@ void EBBHardware::setPenState(bool up)
         mPenServo.write(mPenDownPos, mServoRateDown);
     }
     mPenState = up;
+
+    delay(delayMs);
 }
 
 bool EBBHardware::getPenState()
