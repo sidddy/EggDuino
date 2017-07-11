@@ -1,6 +1,11 @@
 
 [![Build Status](https://secure.travis-ci.org/papabricole/EggDuino.png)](http://travis-ci.org/papabricole/EggDuino)
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/papabricole/EggDuino/master/pictures/IMG_0909.JPG" width="350"/>
+  <img src="https://raw.githubusercontent.com/papabricole/EggDuino/master/pictures/IMG_0910.JPG" width="350"/>
+</p>
+
 Forked from https://github.com/cocktailyogi/EggDuino.
 
 The aim of this fork is to cleanup the codebase to allow hacker to easily add their tweaks.
