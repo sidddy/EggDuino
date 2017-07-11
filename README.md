@@ -6,6 +6,10 @@
   <img src="https://raw.githubusercontent.com/papabricole/EggDuino/master/pictures/IMG_0910.JPG" width="350"/>
 </p>
 
+<p align="center">
+<a href="https://www.youtube.com/watch?v=VEAcOQIdkII"><img src="https://raw.githubusercontent.com/papabricole/EggDuino/master/pictures/video.jpg"></a>
+</p>
+
 Forked from https://github.com/cocktailyogi/EggDuino.
 
 The aim of this fork is to cleanup the codebase to allow hacker to easily add their tweaks.
